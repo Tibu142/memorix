@@ -1,5 +1,6 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, cpSync, mkdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { homedir } from 'node:os';
 import type {
   AgentTarget,
   MCPServerEntry,
@@ -7,6 +8,7 @@ import type {
   WorkflowEntry,
   WorkspaceSyncResult,
   RuleSource,
+  SkillEntry,
 } from '../types.js';
 import { WindsurfMCPAdapter } from './mcp-adapters/windsurf.js';
 import { CursorMCPAdapter } from './mcp-adapters/cursor.js';
@@ -22,6 +24,7 @@ export interface WorkspaceScanResult {
   mcpConfigs: Record<AgentTarget, MCPServerEntry[]>;
   workflows: WorkflowEntry[];
   rulesCount: number;
+  skills: SkillEntry[];
 }
 
 /**
@@ -93,7 +96,10 @@ export class WorkspaceSyncEngine {
       // Rules scan may fail if no rules exist
     }
 
-    return { mcpConfigs, workflows, rulesCount };
+    // Scan skills across all agents
+    const skills = this.scanSkills();
+
+    return { mcpConfigs, workflows, rulesCount, skills };
   }
 
   /**
@@ -105,6 +111,7 @@ export class WorkspaceSyncEngine {
       mcpServers: { scanned: [], generated: [] },
       workflows: { scanned: [], generated: [] },
       rules: { scanned: 0, generated: 0 },
+      skills: { scanned: [], copied: [] },
     };
 
     // 1. Merge all MCP servers from all sources (dedup by name)
@@ -151,10 +158,101 @@ export class WorkspaceSyncEngine {
       // Rules may not exist
     }
 
+    // 4. Skills sync (no format conversion, just copy folders)
+    result.skills.scanned = scan.skills;
+
     return result;
   }
 
   // ---- Private helpers ----
+
+  /** Skills directories per agent */
+  private static SKILLS_DIRS: Record<AgentTarget, string[]> = {
+    codex: ['.codex/skills', '.agents/skills'],
+    cursor: ['.cursor/skills'],
+    windsurf: ['.windsurf/skills'],
+    'claude-code': ['.claude/skills'],
+  };
+
+  /** Get the target skills directory for an agent */
+  private getTargetSkillsDir(target: AgentTarget): string {
+    const dirs = WorkspaceSyncEngine.SKILLS_DIRS[target];
+    return join(this.projectRoot, dirs[0]);
+  }
+
+  /**
+   * Scan all agent skills directories and collect unique skills.
+   */
+  private scanSkills(): SkillEntry[] {
+    const skills: SkillEntry[] = [];
+    const seen = new Set<string>();
+    const home = homedir();
+
+    for (const [agent, dirs] of Object.entries(WorkspaceSyncEngine.SKILLS_DIRS)) {
+      for (const dir of dirs) {
+        // Check project-level and global
+        const paths = [
+          join(this.projectRoot, dir),
+          join(home, dir),
+        ];
+
+        for (const skillsRoot of paths) {
+          if (!existsSync(skillsRoot)) continue;
+
+          try {
+            const entries = readdirSync(skillsRoot, { withFileTypes: true });
+            for (const entry of entries) {
+              if (!entry.isDirectory()) continue;
+              if (seen.has(entry.name)) continue;
+
+              const skillMd = join(skillsRoot, entry.name, 'SKILL.md');
+              if (!existsSync(skillMd)) continue;
+
+              // Parse description from frontmatter
+              let description = '';
+              try {
+                const content = readFileSync(skillMd, 'utf-8');
+                const match = content.match(/^---[\s\S]*?description:\s*["']?(.+?)["']?\s*$/m);
+                if (match) description = match[1];
+              } catch { /* skip */ }
+
+              seen.add(entry.name);
+              skills.push({
+                name: entry.name,
+                description,
+                sourcePath: join(skillsRoot, entry.name),
+                sourceAgent: agent as AgentTarget,
+              });
+            }
+          } catch { /* skip unreadable dirs */ }
+        }
+      }
+    }
+
+    return skills;
+  }
+
+  /**
+   * Copy skills to a target agent's skills directory.
+   * Returns list of copied skill names.
+   */
+  copySkills(skills: SkillEntry[], target: AgentTarget): string[] {
+    const targetDir = this.getTargetSkillsDir(target);
+    const copied: string[] = [];
+
+    for (const skill of skills) {
+      const dest = join(targetDir, skill.name);
+      if (existsSync(dest)) continue; // don't overwrite existing
+
+      try {
+        mkdirSync(targetDir, { recursive: true });
+        cpSync(skill.sourcePath, dest, { recursive: true });
+        copied.push(skill.name);
+      } catch { /* skip on error */ }
+    }
+
+    return copied;
+  }
 
   private scanWorkflows(): WorkflowEntry[] {
     const workflows: WorkflowEntry[] = [];
@@ -200,12 +298,24 @@ export class WorkspaceSyncEngine {
 
     const applyResult = await applier.apply(filesToWrite);
 
+    // Copy skills (no format conversion needed)
+    let copiedSkills: string[] = [];
+    if (syncResult.skills.scanned.length > 0) {
+      copiedSkills = this.copySkills(syncResult.skills.scanned, target);
+    }
+
     // Build summary
     const lines: string[] = [];
     if (applyResult.success) {
       lines.push(`✅ Applied ${applyResult.filesWritten.length} file(s) for ${target}`);
       for (const f of applyResult.filesWritten) {
         lines.push(`  → ${f}`);
+      }
+      if (copiedSkills.length > 0) {
+        lines.push(`\n🧩 Copied ${copiedSkills.length} skill(s):`);
+        for (const sk of copiedSkills) {
+          lines.push(`  → ${sk}`);
+        }
       }
       if (applyResult.backups.length > 0) {
         lines.push(`\n📦 Backups created (${applyResult.backups.length}):`);

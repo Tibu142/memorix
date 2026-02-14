@@ -666,7 +666,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
       title: 'Workspace Sync',
       description:
         'Migrate your entire workspace environment between AI agents. ' +
-        'Syncs MCP server configs, workflows, and rules. ' +
+        'Syncs MCP server configs, workflows, rules, and skills. ' +
         'Action "scan": detect all workspace configs. ' +
         'Action "migrate": generate configs for target agent (preview only). ' +
         'Action "apply": migrate AND write configs to disk with backup/rollback.',
@@ -703,6 +703,15 @@ export async function createMemorixServer(cwd?: string): Promise<{
 
         lines.push('', `### Rules`);
         lines.push(`- ${scan.rulesCount} rule(s) detected across all agents`);
+
+        lines.push('', `### Skills`);
+        if (scan.skills.length > 0) {
+          for (const sk of scan.skills) {
+            lines.push(`- **${sk.name}** (${sk.sourceAgent}): ${sk.description || '(no description)'}`);
+          }
+        } else {
+          lines.push('- No skills found');
+        }
 
         return {
           content: [{ type: 'text' as const, text: lines.join('\n') }],
@@ -748,6 +757,13 @@ export async function createMemorixServer(cwd?: string): Promise<{
 
       if (result.rules.generated > 0) {
         lines.push(`### Rules`, `- ${result.rules.generated} rule file(s) generated`);
+      }
+
+      if (result.skills.scanned.length > 0) {
+        lines.push('### Skills', `- ${result.skills.scanned.length} skill(s) found, ready to copy:`);
+        for (const sk of result.skills.scanned) {
+          lines.push(`  - **${sk.name}** (from ${sk.sourceAgent})`);
+        }
       }
 
       lines.push('', '> Review the generated configs above. Use action "apply" to write them to disk.');

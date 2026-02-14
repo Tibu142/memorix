@@ -260,6 +260,14 @@ export interface WorkflowEntry {
   filePath: string;
 }
 
+/** A skill folder discovered from an agent's skills directory */
+export interface SkillEntry {
+  name: string;
+  description: string;
+  sourcePath: string;
+  sourceAgent: AgentTarget;
+}
+
 /** Result of a workspace sync operation */
 export interface WorkspaceSyncResult {
   mcpServers: {
@@ -273,6 +281,10 @@ export interface WorkspaceSyncResult {
   rules: {
     scanned: number;
     generated: number;
+  };
+  skills: {
+    scanned: SkillEntry[];
+    copied: string[];
   };
 }
 
