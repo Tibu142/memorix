@@ -9,6 +9,7 @@ import type {
   WorkspaceSyncResult,
   RuleSource,
   SkillEntry,
+  SkillConflict,
 } from '../types.js';
 import { WindsurfMCPAdapter } from './mcp-adapters/windsurf.js';
 import { CursorMCPAdapter } from './mcp-adapters/cursor.js';
@@ -25,6 +26,7 @@ export interface WorkspaceScanResult {
   workflows: WorkflowEntry[];
   rulesCount: number;
   skills: SkillEntry[];
+  skillConflicts: SkillConflict[];
 }
 
 /**
@@ -97,9 +99,9 @@ export class WorkspaceSyncEngine {
     }
 
     // Scan skills across all agents
-    const skills = this.scanSkills();
+    const { skills, conflicts: skillConflicts } = this.scanSkills();
 
-    return { mcpConfigs, workflows, rulesCount, skills };
+    return { mcpConfigs, workflows, rulesCount, skills, skillConflicts };
   }
 
   /**
@@ -111,7 +113,7 @@ export class WorkspaceSyncEngine {
       mcpServers: { scanned: [], generated: [] },
       workflows: { scanned: [], generated: [] },
       rules: { scanned: 0, generated: 0 },
-      skills: { scanned: [], copied: [] },
+      skills: { scanned: [], conflicts: [], copied: [], skipped: [] },
     };
 
     // 1. Merge all MCP servers from all sources (dedup by name)
@@ -160,6 +162,7 @@ export class WorkspaceSyncEngine {
 
     // 4. Skills sync (no format conversion, just copy folders)
     result.skills.scanned = scan.skills;
+    result.skills.conflicts = scan.skillConflicts;
 
     return result;
   }
@@ -183,9 +186,10 @@ export class WorkspaceSyncEngine {
   /**
    * Scan all agent skills directories and collect unique skills.
    */
-  private scanSkills(): SkillEntry[] {
+  private scanSkills(): { skills: SkillEntry[]; conflicts: SkillConflict[] } {
     const skills: SkillEntry[] = [];
-    const seen = new Set<string>();
+    const conflicts: SkillConflict[] = [];
+    const seen = new Map<string, SkillEntry>();
     const home = homedir();
 
     for (const [agent, dirs] of Object.entries(WorkspaceSyncEngine.SKILLS_DIRS)) {
@@ -203,7 +207,6 @@ export class WorkspaceSyncEngine {
             const entries = readdirSync(skillsRoot, { withFileTypes: true });
             for (const entry of entries) {
               if (!entry.isDirectory()) continue;
-              if (seen.has(entry.name)) continue;
 
               const skillMd = join(skillsRoot, entry.name, 'SKILL.md');
               if (!existsSync(skillMd)) continue;
@@ -216,33 +219,55 @@ export class WorkspaceSyncEngine {
                 if (match) description = match[1];
               } catch { /* skip */ }
 
-              seen.add(entry.name);
-              skills.push({
+              const newEntry: SkillEntry = {
                 name: entry.name,
                 description,
                 sourcePath: join(skillsRoot, entry.name),
                 sourceAgent: agent as AgentTarget,
-              });
+              };
+
+              const existing = seen.get(entry.name);
+              if (existing) {
+                // Conflict: same name from different agent
+                if (existing.sourceAgent !== agent) {
+                  conflicts.push({
+                    name: entry.name,
+                    kept: existing,
+                    skipped: newEntry,
+                  });
+                }
+                continue;
+              }
+
+              seen.set(entry.name, newEntry);
+              skills.push(newEntry);
             }
           } catch { /* skip unreadable dirs */ }
         }
       }
     }
 
-    return skills;
+    return { skills, conflicts };
   }
 
   /**
    * Copy skills to a target agent's skills directory.
    * Returns list of copied skill names.
    */
-  copySkills(skills: SkillEntry[], target: AgentTarget): string[] {
+  copySkills(skills: SkillEntry[], target: AgentTarget): { copied: string[]; skipped: string[] } {
     const targetDir = this.getTargetSkillsDir(target);
     const copied: string[] = [];
+    const skipped: string[] = [];
 
     for (const skill of skills) {
+      // Don't copy a skill back to its own agent
+      if (skill.sourceAgent === target) continue;
+
       const dest = join(targetDir, skill.name);
-      if (existsSync(dest)) continue; // don't overwrite existing
+      if (existsSync(dest)) {
+        skipped.push(`${skill.name} (already exists in ${target})`);
+        continue;
+      }
 
       try {
         mkdirSync(targetDir, { recursive: true });
@@ -251,7 +276,7 @@ export class WorkspaceSyncEngine {
       } catch { /* skip on error */ }
     }
 
-    return copied;
+    return { copied, skipped };
   }
 
   private scanWorkflows(): WorkflowEntry[] {
@@ -299,9 +324,9 @@ export class WorkspaceSyncEngine {
     const applyResult = await applier.apply(filesToWrite);
 
     // Copy skills (no format conversion needed)
-    let copiedSkills: string[] = [];
+    let skillResult = { copied: [] as string[], skipped: [] as string[] };
     if (syncResult.skills.scanned.length > 0) {
-      copiedSkills = this.copySkills(syncResult.skills.scanned, target);
+      skillResult = this.copySkills(syncResult.skills.scanned, target);
     }
 
     // Build summary
@@ -311,10 +336,22 @@ export class WorkspaceSyncEngine {
       for (const f of applyResult.filesWritten) {
         lines.push(`  → ${f}`);
       }
-      if (copiedSkills.length > 0) {
-        lines.push(`\n🧩 Copied ${copiedSkills.length} skill(s):`);
-        for (const sk of copiedSkills) {
+      if (skillResult.copied.length > 0) {
+        lines.push(`\n🧩 Copied ${skillResult.copied.length} skill(s):`);
+        for (const sk of skillResult.copied) {
           lines.push(`  → ${sk}`);
+        }
+      }
+      if (skillResult.skipped.length > 0) {
+        lines.push(`\n⏭️ Skipped ${skillResult.skipped.length} skill(s):`);
+        for (const sk of skillResult.skipped) {
+          lines.push(`  → ${sk}`);
+        }
+      }
+      if (syncResult.skills.conflicts.length > 0) {
+        lines.push(`\n⚠️ Name conflicts (${syncResult.skills.conflicts.length}):`);
+        for (const c of syncResult.skills.conflicts) {
+          lines.push(`  → "${c.name}": kept ${c.kept.sourceAgent}, skipped ${c.skipped.sourceAgent}`);
         }
       }
       if (applyResult.backups.length > 0) {

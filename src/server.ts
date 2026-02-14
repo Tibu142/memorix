@@ -713,6 +713,13 @@ export async function createMemorixServer(cwd?: string): Promise<{
           lines.push('- No skills found');
         }
 
+        if (scan.skillConflicts.length > 0) {
+          lines.push('', `### ⚠️ Skill Name Conflicts`);
+          for (const c of scan.skillConflicts) {
+            lines.push(`- **${c.name}**: kept from ${c.kept.sourceAgent}, duplicate in ${c.skipped.sourceAgent}`);
+          }
+        }
+
         return {
           content: [{ type: 'text' as const, text: lines.join('\n') }],
         };

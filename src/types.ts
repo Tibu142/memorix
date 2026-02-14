@@ -268,6 +268,13 @@ export interface SkillEntry {
   sourceAgent: AgentTarget;
 }
 
+/** Conflict when two agents have a skill with the same folder name */
+export interface SkillConflict {
+  name: string;
+  kept: SkillEntry;
+  skipped: SkillEntry;
+}
+
 /** Result of a workspace sync operation */
 export interface WorkspaceSyncResult {
   mcpServers: {
@@ -284,7 +291,9 @@ export interface WorkspaceSyncResult {
   };
   skills: {
     scanned: SkillEntry[];
+    conflicts: SkillConflict[];
     copied: string[];
+    skipped: string[];
   };
 }
 
