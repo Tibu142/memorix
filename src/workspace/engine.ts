@@ -191,9 +191,10 @@ export class WorkspaceSyncEngine {
     copilot: [],
   };
 
-  /** Get the target skills directory for an agent */
-  private getTargetSkillsDir(target: AgentTarget): string {
+  /** Get the target skills directory for an agent (null if agent has no skills support) */
+  private getTargetSkillsDir(target: AgentTarget): string | null {
     const dirs = WorkspaceSyncEngine.SKILLS_DIRS[target];
+    if (!dirs || dirs.length === 0) return null;
     return join(this.projectRoot, dirs[0]);
   }
 
@@ -272,6 +273,11 @@ export class WorkspaceSyncEngine {
     const targetDir = this.getTargetSkillsDir(target);
     const copied: string[] = [];
     const skipped: string[] = [];
+
+    // Agent has no skills directory support (e.g. copilot)
+    if (!targetDir) {
+      return { copied, skipped };
+    }
 
     for (const skill of skills) {
       // Don't copy a skill back to its own agent
