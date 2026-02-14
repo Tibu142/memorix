@@ -232,7 +232,7 @@ export const DEFAULT_CONFIG: Partial<MemorixConfig> = {
 // ============================================================
 
 /** Supported agent targets for workspace sync */
-export type AgentTarget = 'windsurf' | 'cursor' | 'claude-code' | 'codex';
+export type AgentTarget = 'windsurf' | 'cursor' | 'claude-code' | 'codex' | 'copilot';
 
 /** A unified MCP server entry across all agent config formats */
 export interface MCPServerEntry {

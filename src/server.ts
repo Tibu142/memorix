@@ -719,7 +719,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
   // Workspace Sync Tool (P3 — Cross-Agent Workspace Bridge)
   // ============================================================
 
-  const AGENT_TARGETS: [string, ...string[]] = ['windsurf', 'cursor', 'claude-code', 'codex'];
+  const AGENT_TARGETS: [string, ...string[]] = ['windsurf', 'cursor', 'claude-code', 'codex', 'copilot'];
 
   /** memorix_workspace_sync — migrate entire workspace config across agents */
   server.registerTool(
