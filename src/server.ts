@@ -16,6 +16,7 @@
  * - New agent format adapters plug in without changing this file
  */
 
+import { watch } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { KnowledgeGraphManager } from './memory/graph.js';
@@ -67,6 +68,30 @@ export async function createMemorixServer(cwd?: string): Promise<{
 
   console.error(`[memorix] Project: ${project.id} (${project.name})`);
   console.error(`[memorix] Data dir: ${projectDir}`);
+
+  // Watch for external writes (e.g., from hook processes) and hot-reload
+  const observationsFile = projectDir + '/observations.json';
+  let reloadDebounce: ReturnType<typeof setTimeout> | null = null;
+  try {
+    watch(observationsFile, () => {
+      // Debounce: wait 500ms after last change before reloading
+      if (reloadDebounce) clearTimeout(reloadDebounce);
+      reloadDebounce = setTimeout(async () => {
+        try {
+          await initObservations(projectDir);
+          const count = await reindexObservations();
+          if (count > 0) {
+            console.error(`[memorix] Hot-reloaded ${count} observations (external write detected)`);
+          }
+        } catch {
+          // Silent — don't crash the server
+        }
+      }, 500);
+    });
+    console.error(`[memorix] Watching for external writes (hooks hot-reload enabled)`);
+  } catch {
+    console.error(`[memorix] Warning: could not watch observations file for hot-reload`);
+  }
 
   // Create MCP server
   const server = new McpServer({
