@@ -19,7 +19,7 @@ import { defineCommand, runMain } from 'citty';
 const main = defineCommand({
   meta: {
     name: 'memorix',
-    version: '0.3.8',
+    version: '0.3.9',
     description: 'Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP',
   },
   subCommands: {

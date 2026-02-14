@@ -1,6 +1,6 @@
 {
   "name": "memorix",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP",
   "type": "module",
   "bin": {
@@ -33,14 +33,20 @@
   },
   "keywords": [
     "mcp",
+    "mcp-server",
+    "model-context-protocol",
     "memory",
     "ai-agent",
+    "ai-coding",
     "cross-agent",
     "knowledge-graph",
+    "workspace-sync",
     "cursor",
     "claude-code",
     "codex",
-    "windsurf"
+    "windsurf",
+    "copilot",
+    "vscode"
   ],
   "author": "AVIDS2",
   "license": "Apache-2.0",
