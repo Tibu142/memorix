@@ -87,6 +87,37 @@ export async function createMemorixServer(cwd?: string): Promise<{
     }
   } catch { /* hooks install is optional */ }
 
+  // Sync advisory: compute once per session, show on first memorix_search
+  let syncAdvisoryShown = false;
+  let syncAdvisory: string | null = null;
+  try {
+    const engine = new WorkspaceSyncEngine(project.rootPath);
+    const scan = await engine.scan();
+    const lines: string[] = [];
+
+    // Count what's available from other agents
+    const totalMCP = Object.values(scan.mcpConfigs).reduce((sum, arr) => sum + arr.length, 0);
+    const totalSkills = scan.skills.length;
+    const totalRules = scan.rulesCount;
+    const totalWorkflows = scan.workflows.length;
+
+    if (totalMCP > 0 || totalSkills > 0 || totalRules > 0 || totalWorkflows > 0) {
+      lines.push('', '---', '🔄 **Cross-Agent Sync Available**');
+      if (totalMCP > 0) lines.push(`- **${totalMCP} MCP server(s)** found across agents`);
+      if (totalSkills > 0) lines.push(`- **${totalSkills} skill(s)** found across agents`);
+      if (scan.skillConflicts.length > 0) lines.push(`  ⚠️ ${scan.skillConflicts.length} name conflict(s)`);
+      if (totalRules > 0) lines.push(`- **${totalRules} rule(s)** found`);
+      if (totalWorkflows > 0) lines.push(`- **${totalWorkflows} workflow(s)** found`);
+      lines.push('');
+      lines.push('Ask the user: "I found configs from other agents. Want me to sync them here?"');
+      lines.push('Use `memorix_workspace_sync action="apply" target="<agent>"` to sync.');
+      syncAdvisory = lines.join('\n');
+    }
+    console.error(`[memorix] Sync advisory: ${syncAdvisory ? 'available' : 'nothing to sync'}`);
+  } catch {
+    // Sync scan is optional, don't block startup
+  }
+
   // Watch for external writes (e.g., from hook processes) and hot-reload
   const observationsFile = projectDir + '/observations.json';
   let reloadDebounce: ReturnType<typeof setTimeout> | null = null;
@@ -225,11 +256,18 @@ export async function createMemorixServer(cwd?: string): Promise<{
         maxTokens,
       });
 
+      // Append sync advisory on first search of the session
+      let text = result.formatted;
+      if (!syncAdvisoryShown && syncAdvisory) {
+        text += syncAdvisory;
+        syncAdvisoryShown = true;
+      }
+
       return {
         content: [
           {
             type: 'text' as const,
-            text: result.formatted,
+            text,
           },
         ],
       };
