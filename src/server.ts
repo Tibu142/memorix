@@ -178,7 +178,6 @@ export async function createMemorixServer(cwd?: string): Promise<{
         query,
         limit,
         type: type as ObservationType | undefined,
-        projectId: project.id,
         maxTokens,
       });
 
@@ -215,7 +214,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
     async ({ anchorId, depthBefore, depthAfter }) => {
       const result = await compactTimeline(
         anchorId,
-        project.id,
+        undefined as unknown as string,
         depthBefore,
         depthAfter,
       );
@@ -250,7 +249,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
       },
     },
     async ({ ids }) => {
-      const result = await compactDetail(ids, project.id);
+      const result = await compactDetail(ids);
 
       return {
         content: [
@@ -293,7 +292,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
       const database = await (await import('./store/orama-store.js')).getDb();
       const allResults = await search(database, {
         term: '',
-        where: { projectId: project.id },
+        where: {},
         limit: 10000,
       });
       const docs = allResults.hits.map((h) => h.document as unknown as import('./types.js').MemorixDocument);
