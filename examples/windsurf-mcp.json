@@ -2,7 +2,7 @@
   "mcpServers": {
     "memorix": {
       "command": "npx",
-      "args": ["memorix", "serve"]
+      "args": ["memorix", "serve", "--cwd", "."]
     }
   }
 }
