@@ -42,7 +42,12 @@ export class FastEmbedProvider implements EmbeddingProvider {
     const cached = cache.get(text);
     if (cached) return cached;
 
-    const result = await this.model.queryEmbed(text);
+    const raw = await this.model.queryEmbed(text);
+    // Ensure plain number[] (fastembed may return Float32Array)
+    const result = Array.from(raw) as number[];
+    if (result.length !== this.dimensions) {
+      throw new Error(`Expected ${this.dimensions}d embedding, got ${result.length}d`);
+    }
     this.cacheSet(text, result);
     return result;
   }
@@ -69,8 +74,9 @@ export class FastEmbedProvider implements EmbeddingProvider {
       for await (const batch of this.model.embed(uncachedTexts, 64)) {
         for (const vec of batch) {
           const originalIdx = uncachedIndices[batchIdx];
-          results[originalIdx] = vec;
-          this.cacheSet(uncachedTexts[batchIdx], vec);
+          const plain = Array.from(vec) as number[];
+          results[originalIdx] = plain;
+          this.cacheSet(uncachedTexts[batchIdx], plain);
           batchIdx++;
         }
       }

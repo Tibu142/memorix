@@ -18,7 +18,8 @@ describe('Project Detector', () => {
 
   it('should detect project from a specific directory', () => {
     const project = detectProject(process.cwd());
-    expect(project.rootPath).toBe(process.cwd());
+    // Normalize path separators for cross-platform compatibility
+    expect(project.rootPath.replace(/\\/g, '/')).toBe(process.cwd().replace(/\\/g, '/'));
   });
 
   it('should fallback to directory name for non-git dirs', () => {

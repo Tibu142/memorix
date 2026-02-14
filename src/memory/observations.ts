@@ -157,29 +157,40 @@ export function getObservationCount(): number {
 export async function reindexObservations(): Promise<number> {
   let count = 0;
   for (const obs of observations) {
-    // Generate embedding during reindex if provider is available
-    const searchableText = [obs.title, obs.narrative, ...obs.facts].join(' ');
-    const embedding = isEmbeddingEnabled() ? await generateEmbedding(searchableText) : null;
+    try {
+      // Generate embedding during reindex if provider is available
+      let embedding: number[] | null = null;
+      if (isEmbeddingEnabled()) {
+        try {
+          const searchableText = [obs.title, obs.narrative, ...obs.facts].join(' ');
+          embedding = await generateEmbedding(searchableText);
+        } catch {
+          // Embedding generation failed for this observation — skip vector, use fulltext
+        }
+      }
 
-    const doc: MemorixDocument = {
-      id: `obs-${obs.id}`,
-      observationId: obs.id,
-      entityName: obs.entityName,
-      type: obs.type,
-      title: obs.title,
-      narrative: obs.narrative,
-      facts: obs.facts.join('\n'),
-      filesModified: obs.filesModified.join('\n'),
-      concepts: obs.concepts.join(', '),
-      tokens: obs.tokens,
-      createdAt: obs.createdAt,
-      projectId: obs.projectId,
-      accessCount: 0,
-      lastAccessedAt: '',
-      ...(embedding ? { embedding } : {}),
-    };
-    await insertObservation(doc);
-    count++;
+      const doc: MemorixDocument = {
+        id: `obs-${obs.id}`,
+        observationId: obs.id,
+        entityName: obs.entityName,
+        type: obs.type,
+        title: obs.title,
+        narrative: obs.narrative,
+        facts: obs.facts.join('\n'),
+        filesModified: obs.filesModified.join('\n'),
+        concepts: obs.concepts.join(', '),
+        tokens: obs.tokens,
+        createdAt: obs.createdAt,
+        projectId: obs.projectId,
+        accessCount: 0,
+        lastAccessedAt: '',
+        ...(embedding ? { embedding } : {}),
+      };
+      await insertObservation(doc);
+      count++;
+    } catch (err) {
+      console.error(`[memorix] Failed to reindex observation #${obs.id}: ${err}`);
+    }
   }
   return count;
 }

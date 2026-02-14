@@ -1,6 +1,6 @@
 {
   "name": "memorix",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP",
   "type": "module",
   "bin": {
@@ -16,7 +16,11 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    "examples"
   ],
   "scripts": {
     "build": "tsup",
