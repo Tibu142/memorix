@@ -2,21 +2,24 @@
 
 > Universal memory layer for AI coding agents via MCP
 
+[![npm version](https://img.shields.io/npm/v/memorix.svg)](https://www.npmjs.com/package/memorix)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 ## What is Memorix?
 
-Memorix is a lightweight local MCP server that acts as a **universal memory layer** across AI coding agents. Your knowledge from Cursor, Claude Code, Codex, and Windsurf is stored once and shared everywhere.
+Memorix is a lightweight local MCP server that acts as a **universal memory layer** across AI coding agents. Your knowledge from **Windsurf, Cursor, Claude Code, Codex, and VS Code Copilot** is stored once and shared everywhere.
 
 ### The Problem
 
 - claude-mem only serves Claude Code
-- memU only serves OpenClaw
+- mcp-memory-service has no cross-agent workspace sync
 - Your architecture decisions in Cursor are invisible to Claude Code
 - Bug fix knowledge in Windsurf doesn't transfer to Codex
-- **No one does cross-agent memory**
+- **No one bridges memory AND workspace configs across agents**
 
 ### The Solution
 
-Memorix stores and indexes project knowledge (architecture decisions, bug fixes, code style preferences) and exposes it via MCP — so **any MCP-supporting agent** can access it.
+Memorix stores and indexes project knowledge (architecture decisions, bug fixes, code style preferences) and exposes it via MCP — so **any MCP-supporting agent** can access it. It also **syncs MCP configs, rules, skills, and workflows** across all your agents automatically.
 
 ## Features
 
@@ -39,12 +42,15 @@ Memorix stores and indexes project knowledge (architecture decisions, bug fixes,
 - **Graceful Degradation**: No fastembed? Falls back to BM25 fulltext automatically
 - **Token Budget**: `maxTokens` parameter trims results to fit context windows
 
-### P2 — Cross-Agent Sync
+### P2 — Cross-Agent Workspace Sync
 
+- **5 Agent Adapters**: Windsurf, Cursor, Claude Code, Codex, VS Code Copilot
+- **MCP Config Sync**: Detect and migrate MCP server configs across agents (merges into existing files — never overwrites)
 - **Rules Parser**: 4 format adapters (Cursor `.mdc`, Claude Code `CLAUDE.md`, Codex `SKILL.md`, Windsurf `.windsurfrules`)
 - **Rules Syncer**: Scan → Deduplicate → Conflict detection → Cross-format generation
-- **Workspace Sync**: MCP config migration + workflow sync across agents
-- **Skills Sync**: Scan `.codex/skills/`, `.cursor/skills/`, `.windsurf/skills/`, `.claude/skills/` → copy entire skill folders across agents (no format conversion needed — SKILL.md is a universal standard)
+- **Skills Sync**: Scan `.codex/skills/`, `.cursor/skills/`, `.windsurf/skills/`, `.claude/skills/` → copy entire skill folders across agents
+- **Sync Advisory**: On first `memorix_search`, auto-detects available configs/skills from other agents and prompts the user
+- **Selective Sync**: Sync specific items by name (e.g. `items=["figma-remote-mcp-server", "create-subagent"]`)
 - **Apply with Safety**: Backup → Atomic write → Auto-rollback on failure
 
 ### P3 — Auto-Memory Hooks
@@ -80,42 +86,63 @@ Memorix stores and indexes project knowledge (architecture decisions, bug fixes,
 ### Install
 
 ```bash
-npm install memorix
+npm install -g memorix
 ```
 
 ### Configure in your agent
-
-**Cursor** (`.cursor/mcp.json`):
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "node",
-      "args": ["node_modules/memorix/dist/index.js"]
-    }
-  }
-}
-```
-
-**Claude Code** (`claude_desktop_config.json`):
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "node",
-      "args": ["node_modules/memorix/dist/index.js"]
-    }
-  }
-}
-```
 
 **Windsurf** (`~/.codeium/windsurf/mcp_config.json`):
 ```json
 {
   "mcpServers": {
     "memorix": {
-      "command": "node",
-      "args": ["node_modules/memorix/dist/index.js"]
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+**Claude Code** (`~/.claude.json`):
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+**Codex** (`~/.codex/config.toml`):
+```toml
+[mcp_servers.memorix]
+command = "memorix"
+args = ["serve"]
+```
+
+**VS Code Copilot** (VS Code `settings.json` or `.vscode/mcp.json`):
+```json
+{
+  "mcp": {
+    "servers": {
+      "memorix": {
+        "command": "memorix",
+        "args": ["serve"]
+      }
     }
   }
 }
@@ -154,7 +181,7 @@ npm install memorix
 ```
 ┌─────────────────────────────────────────────┐
 │                 MCP Clients                  │
-│   Cursor │ Claude Code │ Codex │ Windsurf   │
+│ Windsurf│Cursor│Claude Code│Codex│Copilot │
 └──────────────────┬──────────────────────────┘
                    │ stdio
 ┌──────────────────▼──────────────────────────┐
@@ -177,7 +204,7 @@ npm install memorix
 │                                              │
 │  ┌────────────────────────────────────┐     │
 │  │      Rules & Skills Syncer        │     │
-│  │  Cursor│Claude│Codex│Windsurf     │     │
+│  │  Cursor│Claude│Codex│Windsurf│Copilot│    │
 │  │  rules: scan→dedup→conflict→gen   │     │
 │  │  skills: scan→copy (no convert)   │     │
 │  └────────────────────────────────────┘     │
@@ -246,4 +273,4 @@ Memorix stands on the shoulders of these excellent projects:
 
 ## License
 
-MIT
+Apache 2.0 — see [LICENSE](LICENSE)
