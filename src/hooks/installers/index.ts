@@ -11,20 +11,51 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { createRequire } from 'node:module';
 import type { AgentName, AgentHookConfig } from '../types.js';
 
-/** Hook command — the script all agents will call */
-const HOOK_COMMAND = 'memorix';
-const HOOK_ARGS = ['hook'];
+/**
+ * Resolve the hook command for the current platform.
+ * On Windows, 'memorix' resolves to a .ps1 script that non-PowerShell
+ * environments (like Windsurf hooks) can't execute.
+ * Solution: use 'node /path/to/cli/index.js hook' instead.
+ */
+function resolveHookCommand(): string {
+  if (process.platform === 'win32') {
+    // Try to find the CLI script path
+    try {
+      // 1. Check if running from source (development)
+      const devPath = path.resolve(import.meta.dirname ?? __dirname, '../../cli/index.js');
+      try {
+        const fsStat = require('node:fs');
+        if (fsStat.existsSync(devPath)) {
+          return `node ${devPath.replace(/\\/g, '/')}`;
+        }
+      } catch { /* ignore */ }
+
+      // 2. Find globally installed memorix
+      const require_ = createRequire(import.meta.url);
+      const pkgPath = require_.resolve('memorix/package.json');
+      const cliPath = path.join(path.dirname(pkgPath), 'dist', 'cli', 'index.js');
+      return `node ${cliPath.replace(/\\/g, '/')}`;
+    } catch {
+      // 3. Fallback: assume memorix is in PATH via cmd (not .ps1)
+      return 'memorix';
+    }
+  }
+  // On Unix, 'memorix' works directly
+  return 'memorix';
+}
 
 /**
  * Generate Claude Code / VS Code Copilot hook config.
  * Both use the same format: .claude/settings.json or .github/hooks/*.json
  */
 function generateClaudeConfig(): Record<string, unknown> {
+  const cmd = `${resolveHookCommand()} hook`;
   const hookEntry = {
     type: 'command',
-    command: `${HOOK_COMMAND} ${HOOK_ARGS.join(' ')}`,
+    command: cmd,
     timeout: 10,
   };
 
@@ -43,9 +74,10 @@ function generateClaudeConfig(): Record<string, unknown> {
  * Generate Windsurf Cascade hooks config.
  */
 function generateWindsurfConfig(): Record<string, unknown> {
+  const cmd = `${resolveHookCommand()} hook`;
   const hookEntry = {
-    command: `${HOOK_COMMAND} ${HOOK_ARGS.join(' ')}`,
-    timeout: 10,
+    command: cmd,
+    show_output: false,
   };
 
   return {
@@ -63,16 +95,17 @@ function generateWindsurfConfig(): Record<string, unknown> {
  * Generate Cursor hooks config.
  */
 function generateCursorConfig(): Record<string, unknown> {
+  const cmd = `${resolveHookCommand()} hook`;
   return {
     hooks: {
       beforeSubmitPrompt: {
-        command: `${HOOK_COMMAND} ${HOOK_ARGS.join(' ')}`,
+        command: cmd,
       },
       afterFileEdit: {
-        command: `${HOOK_COMMAND} ${HOOK_ARGS.join(' ')}`,
+        command: cmd,
       },
       stop: {
-        command: `${HOOK_COMMAND} ${HOOK_ARGS.join(' ')}`,
+        command: cmd,
       },
     },
   };
@@ -92,7 +125,7 @@ filePattern: "**/*"
 Run the memorix hook command to analyze changes and store relevant memories:
 
 \`\`\`bash
-memorix hook
+${resolveHookCommand()} hook
 \`\`\`
 `;
 }

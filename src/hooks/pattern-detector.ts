@@ -51,9 +51,10 @@ const PATTERNS: Array<{
   {
     type: 'configuration',
     keywords: [
-      /\b(config(ured?|uration)?|setting|environment|env\b|\.env|path|port)\b/i,
-      /(配置|环境|路径|端口|设置|安装)/,
-      /\b(gradle|webpack|vite|tsconfig|package\.json|docker)\b/i,
+      /\b(config(ured?|uration)?|setting|environment|\.env)\b/i,
+      /(配置|环境变量|端口配置|设置项|安装配置)/,
+      /\b(gradle|webpack|vite|tsconfig|package\.json|docker|nginx)\b/i,
+      /\b(port\s*[:=]|listen\s+\d|bind\s+\d|DATABASE_URL|API_KEY)\b/i,
     ],
     minLength: 80,
     baseConfidence: 0.7,

@@ -20,6 +20,18 @@ const COOLDOWN_MS = 30_000;
 /** Minimum content length for auto-store */
 const MIN_STORE_LENGTH = 100;
 
+/** Lower threshold for code edits (file context adds value) */
+const MIN_EDIT_LENGTH = 30;
+
+/** Trivial commands to skip (diagnostics, navigation, etc.) */
+const NOISE_COMMANDS = [
+  /^(ls|dir|cd|pwd|echo|cat|type|head|tail|wc|find|which|where|whoami)\b/i,
+  /^(Get-Content|Test-Path|Get-Item|Get-ChildItem|Set-Location|Write-Host)\b/i,
+  /^(Start-Sleep|Select-String|Select-Object|Format-Table|Measure-Object)\b/i,
+  /^(mkdir|rm|cp|mv|touch|chmod|chown)\b/i,
+  /^(node -[ep]|python -c)\b/i,
+];
+
 /** Max content length (truncate beyond this) */
 const MAX_CONTENT_LENGTH = 4000;
 
@@ -180,8 +192,59 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
         output: defaultOutput,
       };
 
-    case 'post_edit':
-    case 'post_command':
+    case 'post_edit': {
+      // Code edits: lower threshold, always worth recording if pattern matches
+      const editKey = `post_edit:${input.filePath ?? 'general'}`;
+      if (isInCooldown(editKey)) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      const editContent = extractContent(input);
+      if (editContent.length < MIN_EDIT_LENGTH) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      const editPattern = detectBestPattern(editContent, 0.6);
+      if (!editPattern) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      markTriggered(editKey);
+      return {
+        observation: buildObservation(input, editContent),
+        output: defaultOutput,
+      };
+    }
+
+    case 'post_command': {
+      // Filter noise commands
+      if (input.command && NOISE_COMMANDS.some((r) => r.test(input.command!))) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      const cmdKey = `post_command:${input.command ?? 'general'}`;
+      if (isInCooldown(cmdKey)) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      // Use commandOutput for pattern detection if available, else command
+      const cmdContent = input.commandOutput || extractContent(input);
+      if (cmdContent.length < MIN_STORE_LENGTH) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      const cmdPattern = detectBestPattern(cmdContent);
+      if (!cmdPattern) {
+        return { observation: null, output: defaultOutput };
+      }
+
+      markTriggered(cmdKey);
+      return {
+        observation: buildObservation(input, cmdContent),
+        output: defaultOutput,
+      };
+    }
+
     case 'post_tool':
     case 'post_response':
     case 'user_prompt': {
@@ -199,7 +262,6 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
       // Detect pattern
       const pattern = detectBestPattern(content);
       if (!pattern) {
-        // No recognizable pattern — skip (avoid noise)
         return { observation: null, output: defaultOutput };
       }
 
