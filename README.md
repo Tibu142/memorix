@@ -44,7 +44,25 @@ Memorix stores and indexes project knowledge (architecture decisions, bug fixes,
 - **Rules Parser**: 4 format adapters (Cursor `.mdc`, Claude Code `CLAUDE.md`, Codex `SKILL.md`, Windsurf `.windsurfrules`)
 - **Rules Syncer**: Scan → Deduplicate → Conflict detection → Cross-format generation
 - **Workspace Sync**: MCP config migration + workflow sync across agents
+- **Skills Sync**: Scan `.codex/skills/`, `.cursor/skills/`, `.windsurf/skills/`, `.claude/skills/` → copy entire skill folders across agents (no format conversion needed — SKILL.md is a universal standard)
 - **Apply with Safety**: Backup → Atomic write → Auto-rollback on failure
+
+### P3 — Auto-Memory Hooks
+
+- **Hook Events**: `user_prompt`, `post_response`, `post_edit`, `post_command`, `post_tool`, `session_end`
+- **Agent Normalizer**: Maps Windsurf/Cursor/Claude/Codex native events to unified hook events
+- **Pattern Detection**: Auto-detects decisions, errors, gotchas, configurations, learnings, implementations
+- **Cooldown Filtering**: Prevents duplicate storage within configurable time windows
+- **Noise Filtering**: Skips trivial commands (`ls`, `cat`, `pwd`, etc.)
+- **Agent Rules**: Auto-installs `.windsurf/rules/memorix.md` (or equivalent) to guide agents in proactive memory management
+- **One-Command Install**: `memorix hooks install` sets up hooks + rules for your agent
+
+### Context Continuity
+
+- **Session Start**: Agent rules instruct AI to search memories before responding
+- **During Session**: Auto-capture decisions, bugs, gotchas via hooks + agent-driven `memorix_store`
+- **Session End**: Agent stores a "handoff note" summarizing progress and next steps
+- **Result**: Start a new session and your AI already knows everything — no re-explaining needed
 
 ### P5 — Intelligence (Competitor-Inspired)
 
@@ -115,7 +133,7 @@ npm install memorix
 | `memorix_detail` | L3 | Full observation details | ~500-1000/result |
 | `memorix_retention` | Analytics | Memory decay & retention status | — |
 | `memorix_rules_sync` | Rules | Scan, dedup, convert rules across agents | — |
-| `memorix_workspace_sync` | Workspace | Scan/migrate MCP configs across agents | — |
+| `memorix_workspace_sync` | Workspace | Scan/migrate MCP configs, workflows, and skills across agents | — |
 
 #### MCP Official Compatible
 
@@ -158,9 +176,16 @@ npm install memorix
 │  └─────────────────────────────────────┘    │
 │                                              │
 │  ┌────────────────────────────────────┐     │
-│  │         Rules Syncer               │     │
+│  │      Rules & Skills Syncer        │     │
 │  │  Cursor│Claude│Codex│Windsurf     │     │
-│  │  scan → dedup → conflict → gen    │     │
+│  │  rules: scan→dedup→conflict→gen   │     │
+│  │  skills: scan→copy (no convert)   │     │
+│  └────────────────────────────────────┘     │
+│                                              │
+│  ┌────────────────────────────────────┐     │
+│  │       Auto-Memory Hooks           │     │
+│  │  normalize→detect→filter→store    │     │
+│  │  + agent rules (context cont.)    │     │
 │  └────────────────────────────────────┘     │
 └──────────────────────────────────────────────┘
 ```
@@ -179,7 +204,7 @@ npm install memorix
 | Entity extraction | Regex patterns | MemCP |
 | Rule parsing | `gray-matter` | — |
 | Build | `tsup` | — |
-| Test | `vitest` | 195 tests |
+| Test | `vitest` | 219 tests |
 
 ## Optional: Enable Vector Search
 
@@ -200,7 +225,7 @@ npm install
 # Build
 npm run build
 
-# Run tests (195 tests)
+# Run tests (219 tests)
 npm test
 
 # Type check
