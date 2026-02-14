@@ -1,0 +1,77 @@
+{
+  "name": "memorix",
+  "version": "0.1.0",
+  "description": "Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP",
+  "type": "module",
+  "bin": {
+    "memorix": "./dist/cli/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "memory",
+    "ai-agent",
+    "cross-agent",
+    "knowledge-graph",
+    "cursor",
+    "claude-code",
+    "codex",
+    "windsurf"
+  ],
+  "author": "AVIDS2",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AVIDS2/memorix.git"
+  },
+  "homepage": "https://github.com/AVIDS2/memorix#readme",
+  "bugs": {
+    "url": "https://github.com/AVIDS2/memorix/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@orama/orama": "^3.1.0",
+    "@orama/plugin-data-persistence": "^3.1.0",
+    "gpt-tokenizer": "^2.8.0",
+    "gray-matter": "^4.0.3",
+    "remark": "^15.0.1",
+    "remark-stringify": "^11.0.0",
+    "diff": "^7.0.0",
+    "citty": "^0.1.6",
+    "@clack/prompts": "^0.9.1",
+    "zod": "^3.24.0"
+  },
+  "optionalDependencies": {
+    "fastembed": "^1.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "vitest": "^3.0.0",
+    "typescript": "^5.7.0",
+    "@types/diff": "^7.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
