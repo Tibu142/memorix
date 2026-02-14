@@ -169,7 +169,7 @@ export class WorkspaceSyncEngine {
   /** Skills directories per agent */
   private static SKILLS_DIRS: Record<AgentTarget, string[]> = {
     codex: ['.codex/skills', '.agents/skills'],
-    cursor: ['.cursor/skills'],
+    cursor: ['.cursor/skills', '.cursor/skills-cursor'],
     windsurf: ['.windsurf/skills'],
     'claude-code': ['.claude/skills'],
   };
