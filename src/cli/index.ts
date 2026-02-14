@@ -26,6 +26,8 @@ const main = defineCommand({
     serve: () => import('./commands/serve.js').then(m => m.default),
     status: () => import('./commands/status.js').then(m => m.default),
     sync: () => import('./commands/sync.js').then(m => m.default),
+    hook: () => import('./commands/hook.js').then(m => m.default),
+    hooks: () => import('./commands/hooks.js').then(m => m.default),
   },
   run() {
     // Default: show help (citty handles this automatically)
