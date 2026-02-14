@@ -10,7 +10,8 @@
  */
 
 import type { SearchOptions, IndexEntry, TimelineContext, MemorixDocument } from '../types.js';
-import { searchObservations, getObservationsByIds, getTimeline } from '../store/orama-store.js';
+import { searchObservations, getTimeline } from '../store/orama-store.js';
+import { getObservation } from '../memory/observations.js';
 import { formatIndexTable, formatTimeline, formatObservationDetail } from './index-format.js';
 import { countTextTokens } from './token-budget.js';
 
@@ -65,15 +66,37 @@ export async function compactTimeline(
  */
 export async function compactDetail(
   ids: number[],
-  projectId?: string,
 ): Promise<{
   documents: MemorixDocument[];
   formatted: string;
   totalTokens: number;
 }> {
-  const documents = await getObservationsByIds(ids, projectId);
+  // Use in-memory observations for reliable ID lookup (Orama where-clause
+  // can be unreliable with empty term + number filter)
+  const documents: MemorixDocument[] = [];
+  for (const id of ids) {
+    const obs = getObservation(id);
+    if (obs) {
+      documents.push({
+        id: `obs-${obs.id}`,
+        observationId: obs.id,
+        entityName: obs.entityName,
+        type: obs.type,
+        title: obs.title,
+        narrative: obs.narrative,
+        facts: obs.facts.join('\n'),
+        filesModified: obs.filesModified.join('\n'),
+        concepts: obs.concepts.join(', '),
+        tokens: obs.tokens,
+        createdAt: obs.createdAt,
+        projectId: obs.projectId,
+        accessCount: 0,
+        lastAccessedAt: '',
+      });
+    }
+  }
 
-  const formattedParts = documents.map((doc) =>
+  const formattedParts = documents.map((doc: MemorixDocument) =>
     formatObservationDetail(doc),
   );
 
