@@ -21,6 +21,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { KnowledgeGraphManager } from './memory/graph.js';
 import { storeObservation, initObservations, reindexObservations } from './memory/observations.js';
+import { resetDb } from './store/orama-store.js';
 import { createAutoRelations } from './memory/auto-relations.js';
 import { extractEntities } from './memory/entity-extractor.js';
 import { compactSearch, compactTimeline, compactDetail } from './compact/engine.js';
@@ -78,6 +79,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
       if (reloadDebounce) clearTimeout(reloadDebounce);
       reloadDebounce = setTimeout(async () => {
         try {
+          await resetDb(); // Clear Orama before re-inserting
           await initObservations(projectDir);
           const count = await reindexObservations();
           if (count > 0) {
