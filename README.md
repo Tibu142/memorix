@@ -56,7 +56,7 @@ Memorix stores and indexes project knowledge (architecture decisions, bug fixes,
 ### P3 — Auto-Memory Hooks
 
 - **Hook Events**: `user_prompt`, `post_response`, `post_edit`, `post_command`, `post_tool`, `session_end`
-- **Agent Normalizer**: Maps Windsurf/Cursor/Claude/Codex native events to unified hook events
+- **Agent Normalizer**: Maps Windsurf/Cursor/Claude Code/Codex native events to unified hook events
 - **Pattern Detection**: Auto-detects decisions, errors, gotchas, configurations, learnings, implementations
 - **Cooldown Filtering**: Prevents duplicate storage within configurable time windows
 - **Noise Filtering**: Skips trivial commands (`ls`, `cat`, `pwd`, etc.)
@@ -204,7 +204,7 @@ args = ["serve"]
 │                                              │
 │  ┌────────────────────────────────────┐     │
 │  │      Rules & Skills Syncer        │     │
-│  │  Cursor│Claude│Codex│Windsurf│Copilot│    │
+│  │  Cursor│Claude Code│Codex│Windsurf│Copilot│ │
 │  │  rules: scan→dedup→conflict→gen   │     │
 │  │  skills: scan→copy (no convert)   │     │
 │  └────────────────────────────────────┘     │
