@@ -106,7 +106,7 @@ function getProjectConfigPath(agent: AgentName, projectRoot: string): string {
     case 'copilot':
       return path.join(projectRoot, '.github', 'hooks', 'memorix.json');
     case 'windsurf':
-      return path.join(projectRoot, '.windsurf', 'cascade.json');
+      return path.join(projectRoot, '.windsurf', 'hooks.json');
     case 'cursor':
       return path.join(projectRoot, '.cursor', 'hooks.json');
     case 'kiro':
@@ -128,7 +128,7 @@ function getGlobalConfigPath(agent: AgentName): string {
     case 'copilot':
       return path.join(home, '.claude', 'settings.json');
     case 'windsurf':
-      return path.join(home, '.codeium', 'windsurf', 'cascade.json');
+      return path.join(home, '.codeium', 'windsurf', 'hooks.json');
     case 'cursor':
       return path.join(home, '.cursor', 'hooks.json');
     default:

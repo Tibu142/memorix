@@ -251,9 +251,16 @@ export async function runHook(): Promise<void> {
   if (observation) {
     try {
       // Dynamic import to avoid circular deps and keep hook handler lightweight
-      const { storeObservation } = await import('../memory/observations.js');
+      const { storeObservation, initObservations } = await import('../memory/observations.js');
       const { detectProject } = await import('../project/detector.js');
+      const { getProjectDataDir } = await import('../store/persistence.js');
+
       const project = await detectProject(input.cwd || process.cwd());
+      const dataDir = await getProjectDataDir(project.id);
+
+      // Initialize observations manager (idempotent if already initialized)
+      await initObservations(dataDir);
+
       await storeObservation({ ...observation, projectId: project.id });
     } catch {
       // Silent fail — hooks must never break the agent

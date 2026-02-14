@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "post_write_code": [
+      {
+        "command": "memorix hook",
+        "show_output": false
+      }
+    ],
+    "post_run_command": [
+      {
+        "command": "memorix hook",
+        "show_output": false
+      }
+    ],
+    "post_mcp_tool_use": [
+      {
+        "command": "memorix hook",
+        "show_output": false
+      }
+    ],
+    "pre_user_prompt": [
+      {
+        "command": "memorix hook",
+        "show_output": false
+      }
+    ],
+    "post_cascade_response": [
+      {
+        "command": "memorix hook",
+        "show_output": false
+      }
+    ]
+  }
+}
