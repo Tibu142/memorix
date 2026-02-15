@@ -646,7 +646,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
   // Rules Sync Tool (P2 — Memorix differentiator)
   // ============================================================
 
-  const RULE_SOURCES: [string, ...string[]] = ['cursor', 'claude-code', 'codex', 'windsurf', 'antigravity'];
+  const RULE_SOURCES: [string, ...string[]] = ['cursor', 'claude-code', 'codex', 'windsurf', 'antigravity', 'copilot'];
 
   /** memorix_rules_sync — scan, dedup, and generate rules across agents */
   server.registerTool(
@@ -654,7 +654,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
     {
       title: 'Rules Sync',
       description:
-        'Scan project for agent rule files (Cursor, Claude Code, Codex, Windsurf, Antigravity), ' +
+        'Scan project for agent rule files (Cursor, Claude Code, Codex, Windsurf, Antigravity, Copilot), ' +
         'deduplicate, detect conflicts, and optionally generate rules for a target agent format. ' +
         'Without target: returns sync status report. With target: generates converted rule files.',
       inputSchema: {

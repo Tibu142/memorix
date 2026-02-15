@@ -191,7 +191,7 @@ export class WorkspaceSyncEngine {
     cursor: ['.cursor/skills', '.cursor/skills-cursor'],
     windsurf: ['.windsurf/skills'],
     'claude-code': ['.claude/skills'],
-    copilot: [],
+    copilot: ['.github/skills', '.copilot/skills'],
     antigravity: ['.agent/skills', '.gemini/skills', '.gemini/antigravity/skills'],
   };
 
@@ -410,7 +410,7 @@ export class WorkspaceSyncEngine {
       'claude-code': 'claude-code',
       codex: 'codex',
       windsurf: 'windsurf',
-      copilot: 'windsurf',
+      copilot: 'copilot',
       antigravity: 'antigravity',
     };
     return map[target] ?? null;

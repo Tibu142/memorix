@@ -165,6 +165,7 @@ export type RuleSource =
   | 'codex'
   | 'windsurf'
   | 'antigravity'
+  | 'copilot'
   | 'memorix';
 
 /** A parsed rule in the unified intermediate representation */
