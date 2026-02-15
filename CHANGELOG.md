@@ -1,6 +1,25 @@
 # Changelog
 
-## 0.1.0 (2026-02-14)
+All notable changes to this project will be documented in this file.
+
+## [0.5.0] — 2026-02-15
+
+### Added
+- **Antigravity Adapter**: Full support for Antigravity/Gemini IDE (MCP config + rules)
+- **Copilot Adapter**: VS Code Copilot MCP config adapter + rules format adapter
+- **Comprehensive Documentation**: 7 developer docs in `docs/` (Architecture, Modules, API Reference, Design Decisions, Development Guide, Known Issues & Roadmap, AI Context)
+- **8 new npm keywords**: antigravity, mcp-tool, memory-layer, ai-memory, progressive-disclosure, orama, vector-search, bm25
+- `prepublishOnly` now runs `npm test` in addition to build
+
+### Changed
+- README completely rewritten with clearer structure, npx zero-install setup, 6 agent configs, comparison table, Progressive Disclosure example, and architecture diagram
+- `description` field expanded for better npm search ranking
+- `files` array cleaned up (removed unused `examples` directory)
+
+### Fixed
+- 274 tests passing (up from 219), zero regressions
+
+## [0.1.0] — 2026-02-14
 
 ### Core
 - Knowledge Graph: Entity-Relation-Observation model (MCP Official compatible)

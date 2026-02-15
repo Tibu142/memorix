@@ -1,8 +1,9 @@
 {
   "name": "memorix",
-  "version": "0.4.1",
-  "description": "Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP",
+  "version": "0.5.0",
+  "description": "Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP. Knowledge graph, progressive disclosure search, workspace sync, and auto-memory hooks across Windsurf, Cursor, Claude Code, Codex, Copilot, and Antigravity.",
   "type": "module",
+  "sideEffects": false,
   "bin": {
     "memorix": "./dist/cli/index.js"
   },
@@ -19,8 +20,7 @@
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
-    "CLAUDE.md",
-    "examples"
+    "CLAUDE.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -29,24 +29,32 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "mcp",
     "mcp-server",
+    "mcp-tool",
     "model-context-protocol",
     "memory",
+    "memory-layer",
     "ai-agent",
     "ai-coding",
+    "ai-memory",
     "cross-agent",
     "knowledge-graph",
     "workspace-sync",
+    "progressive-disclosure",
     "cursor",
     "claude-code",
     "codex",
     "windsurf",
     "copilot",
-    "vscode"
+    "antigravity",
+    "vscode",
+    "orama",
+    "vector-search",
+    "bm25"
   ],
   "author": "AVIDS2",
   "license": "Apache-2.0",
@@ -57,6 +65,10 @@
   "homepage": "https://github.com/AVIDS2/memorix#readme",
   "bugs": {
     "url": "https://github.com/AVIDS2/memorix/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/AVIDS2"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -85,3 +97,4 @@
     "@types/node": "^22.0.0"
   }
 }
+

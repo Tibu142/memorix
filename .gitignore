@@ -1,14 +1,25 @@
+# Dependencies & Build
 node_modules/
 dist/
 *.tgz
+
+# Memorix data
 .memorix-data/
 *.backup-*
+
+# Fastembed model cache (~133MB ONNX models)
+local_cache/
+
+# Dev-only files
+demo/
 image/
+
+# Logs & OS
 *.log
 .DS_Store
 Thumbs.db
 
-# Agent skills (installed during testing)
+# Agent configs (installed during testing)
 .agent/
 .gemini/
 .shared/
