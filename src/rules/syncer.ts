@@ -17,6 +17,7 @@ import { CursorAdapter } from './adapters/cursor.js';
 import { ClaudeCodeAdapter } from './adapters/claude-code.js';
 import { CodexAdapter } from './adapters/codex.js';
 import { WindsurfAdapter } from './adapters/windsurf.js';
+import { AntigravityAdapter } from './adapters/antigravity.js';
 
 /** A detected conflict between two rules */
 export interface RuleConflict {
@@ -52,6 +53,7 @@ export class RulesSyncer {
       new ClaudeCodeAdapter(),
       new CodexAdapter(),
       new WindsurfAdapter(),
+      new AntigravityAdapter(),
     ];
     for (const a of all) {
       this.adapters.set(a.source, a);

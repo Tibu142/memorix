@@ -16,6 +16,7 @@ import { CursorMCPAdapter } from './mcp-adapters/cursor.js';
 import { CodexMCPAdapter } from './mcp-adapters/codex.js';
 import { ClaudeCodeMCPAdapter } from './mcp-adapters/claude-code.js';
 import { CopilotMCPAdapter } from './mcp-adapters/copilot.js';
+import { AntigravityMCPAdapter } from './mcp-adapters/antigravity.js';
 import { WorkflowSyncer } from './workflow-sync.js';
 import { RulesSyncer } from '../rules/syncer.js';
 import { sanitize } from './sanitizer.js';
@@ -50,6 +51,7 @@ export class WorkspaceSyncEngine {
       ['codex', new CodexMCPAdapter()],
       ['claude-code', new ClaudeCodeMCPAdapter()],
       ['copilot', new CopilotMCPAdapter()],
+      ['antigravity', new AntigravityMCPAdapter()],
     ]);
     this.workflowSyncer = new WorkflowSyncer();
     this.rulesSyncer = new RulesSyncer(projectRoot);
@@ -65,6 +67,7 @@ export class WorkspaceSyncEngine {
       codex: [],
       'claude-code': [],
       copilot: [],
+      antigravity: [],
     };
 
     // Scan MCP configs from each agent
@@ -189,6 +192,7 @@ export class WorkspaceSyncEngine {
     windsurf: ['.windsurf/skills'],
     'claude-code': ['.claude/skills'],
     copilot: [],
+    antigravity: ['.agent/skills', '.gemini/skills', '.gemini/antigravity/skills'],
   };
 
   /** Get the target skills directory for an agent (null if agent has no skills support) */
@@ -407,6 +411,7 @@ export class WorkspaceSyncEngine {
       codex: 'codex',
       windsurf: 'windsurf',
       copilot: 'windsurf',
+      antigravity: 'antigravity',
     };
     return map[target] ?? null;
   }

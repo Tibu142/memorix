@@ -157,13 +157,14 @@ export interface MemorixDocument {
 
 /**
  * Supported agent/IDE rule sources.
- * Extensible: add 'kiro' | 'copilot' | 'antigravity' etc. in the future.
+ * Extensible: add 'kiro' | 'copilot' etc. in the future.
  */
 export type RuleSource =
   | 'cursor'
   | 'claude-code'
   | 'codex'
   | 'windsurf'
+  | 'antigravity'
   | 'memorix';
 
 /** A parsed rule in the unified intermediate representation */
@@ -232,7 +233,7 @@ export const DEFAULT_CONFIG: Partial<MemorixConfig> = {
 // ============================================================
 
 /** Supported agent targets for workspace sync */
-export type AgentTarget = 'windsurf' | 'cursor' | 'claude-code' | 'codex' | 'copilot';
+export type AgentTarget = 'windsurf' | 'cursor' | 'claude-code' | 'codex' | 'copilot' | 'antigravity';
 
 /** A unified MCP server entry across all agent config formats */
 export interface MCPServerEntry {

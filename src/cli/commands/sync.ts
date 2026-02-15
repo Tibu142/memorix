@@ -13,6 +13,7 @@ const SOURCE_LABELS: Record<string, string> = {
   'claude-code': 'Claude Code (CLAUDE.md, .claude/rules/*.md)',
   codex: 'Codex (SKILL.md, AGENTS.md)',
   windsurf: 'Windsurf (.windsurfrules, .windsurf/rules/*.md)',
+  antigravity: 'Antigravity (.agent/rules/*.md, GEMINI.md)',
 };
 
 export default defineCommand({
@@ -23,7 +24,7 @@ export default defineCommand({
   args: {
     target: {
       type: 'string',
-      description: 'Target agent format (cursor, claude-code, codex, windsurf)',
+      description: 'Target agent format (cursor, claude-code, codex, windsurf, antigravity)',
       required: false,
     },
     dry: {
@@ -81,13 +82,13 @@ export default defineCommand({
     let target = args.target as RuleSource | undefined;
 
     if (!target) {
-      const available = ['cursor', 'claude-code', 'codex', 'windsurf'].filter(
+      const available = ['cursor', 'claude-code', 'codex', 'windsurf', 'antigravity'].filter(
         t => !sources.includes(t as RuleSource),
       );
 
       if (available.length === 0) {
         // All formats already present, let user pick any
-        available.push('cursor', 'claude-code', 'codex', 'windsurf');
+        available.push('cursor', 'claude-code', 'codex', 'windsurf', 'antigravity');
       }
 
       const selected = await p.select({

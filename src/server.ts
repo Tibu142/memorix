@@ -646,7 +646,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
   // Rules Sync Tool (P2 — Memorix differentiator)
   // ============================================================
 
-  const RULE_SOURCES: [string, ...string[]] = ['cursor', 'claude-code', 'codex', 'windsurf'];
+  const RULE_SOURCES: [string, ...string[]] = ['cursor', 'claude-code', 'codex', 'windsurf', 'antigravity'];
 
   /** memorix_rules_sync — scan, dedup, and generate rules across agents */
   server.registerTool(
@@ -654,7 +654,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
     {
       title: 'Rules Sync',
       description:
-        'Scan project for agent rule files (Cursor, Claude Code, Codex, Windsurf), ' +
+        'Scan project for agent rule files (Cursor, Claude Code, Codex, Windsurf, Antigravity), ' +
         'deduplicate, detect conflicts, and optionally generate rules for a target agent format. ' +
         'Without target: returns sync status report. With target: generates converted rule files.',
       inputSchema: {
@@ -719,7 +719,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
   // Workspace Sync Tool (P3 — Cross-Agent Workspace Bridge)
   // ============================================================
 
-  const AGENT_TARGETS: [string, ...string[]] = ['windsurf', 'cursor', 'claude-code', 'codex', 'copilot'];
+  const AGENT_TARGETS: [string, ...string[]] = ['windsurf', 'cursor', 'claude-code', 'codex', 'copilot', 'antigravity'];
 
   /** memorix_workspace_sync — migrate entire workspace config across agents */
   server.registerTool(

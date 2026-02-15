@@ -7,3 +7,8 @@ image/
 *.log
 .DS_Store
 Thumbs.db
+
+# Agent skills (installed during testing)
+.agent/
+.gemini/
+.shared/
