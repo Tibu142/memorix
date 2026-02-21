@@ -33,10 +33,10 @@ afterEach(async () => {
 
 describe('Persistence Layer', () => {
   describe('getProjectDataDir', () => {
-    it('should create global data directory (projectId is metadata only)', async () => {
+    it('should create project-specific data directory', async () => {
       const dir = await getProjectDataDir('user/repo', testDir);
-      // Global storage: all projects share the same base directory
-      expect(dir).toBe(testDir);
+      // Project isolation: each project gets its own subdirectory
+      expect(dir).toBe(path.join(testDir, 'user--repo'));
       const stat = await fs.stat(dir);
       expect(stat.isDirectory()).toBe(true);
     });
@@ -45,6 +45,7 @@ describe('Persistence Layer', () => {
       const dir1 = await getProjectDataDir('my/project', testDir);
       const dir2 = await getProjectDataDir('my/project', testDir);
       expect(dir1).toBe(dir2);
+      expect(dir1).toBe(path.join(testDir, 'my--project'));
     });
   });
 
