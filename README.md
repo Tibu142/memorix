@@ -28,11 +28,8 @@
 
 ## ⚡ Quick Start
 
-### 30-Second Setup (Zero Install)
+One config line. Seven agents. Zero context loss.
 
-Add Memorix to your agent's MCP config — **that's it**. No global install needed.
-
-**Windsurf** → `~/.codeium/windsurf/mcp_config.json`
 ```json
 {
   "mcpServers": {
@@ -44,38 +41,9 @@ Add Memorix to your agent's MCP config — **that's it**. No global install need
 }
 ```
 
-Restart your agent and Memorix is running! 🎉
+Add this to your agent's MCP config, restart — done. 🎉
 
-> **Windsurf timeout troubleshooting**
-> 
-> If you see `MCP server initialization timed out after 60 seconds`, keep the same `npx` config but add `--cwd` to force project root:
-> 
-> ```json
-> {
->   "mcpServers": {
->     "memorix": {
->       "command": "npx",
->       "args": [
->         "-y",
->         "memorix@latest",
->         "serve",
->         "--cwd",
->         "<your-project-path>"
->       ]
->     }
->   }
-> }
-> ```
-
-> 💡 More agent configs: [Cursor](#cursor) • [Claude Code](#claude-code) • [Codex](#codex) • [VS Code Copilot](#vs-code-copilot) • [Antigravity](#antigravity) • [Kiro](#kiro)
-
-### Or Install Globally
-
-```bash
-npm install -g memorix
-```
-
-Then use `"command": "memorix"` instead of `"command": "npx"` in your config.
+> 💡 Agent-specific config paths: [Windsurf](#windsurf) • [Cursor](#cursor) • [Claude Code](#claude-code) • [Codex](#codex) • [VS Code Copilot](#vs-code-copilot) • [Antigravity](#antigravity) • [Kiro](#kiro)
 
 ---
 
@@ -163,6 +131,32 @@ Session 2: New chat, same project
 ---
 
 ## 🔧 Agent Configuration
+
+### Windsurf
+
+`~/.codeium/windsurf/mcp_config.json`:
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "npx",
+      "args": ["-y", "memorix@latest", "serve"]
+    }
+  }
+}
+```
+
+> **Timeout troubleshooting** — If you see `MCP server initialization timed out after 60 seconds`, add `--cwd` to force the project root:
+> ```json
+> {
+>   "mcpServers": {
+>     "memorix": {
+>       "command": "npx",
+>       "args": ["-y", "memorix@latest", "serve", "--cwd", "<your-project-path>"]
+>     }
+>   }
+> }
+> ```
 
 ### Cursor
 
