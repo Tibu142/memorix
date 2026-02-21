@@ -157,7 +157,7 @@ export interface MemorixDocument {
 
 /**
  * Supported agent/IDE rule sources.
- * Extensible: add 'kiro' | 'copilot' etc. in the future.
+ * All 7 major AI IDEs are supported.
  */
 export type RuleSource =
   | 'cursor'
@@ -166,6 +166,7 @@ export type RuleSource =
   | 'windsurf'
   | 'antigravity'
   | 'copilot'
+  | 'kiro'
   | 'memorix';
 
 /** A parsed rule in the unified intermediate representation */
@@ -234,7 +235,7 @@ export const DEFAULT_CONFIG: Partial<MemorixConfig> = {
 // ============================================================
 
 /** Supported agent targets for workspace sync */
-export type AgentTarget = 'windsurf' | 'cursor' | 'claude-code' | 'codex' | 'copilot' | 'antigravity';
+export type AgentTarget = 'windsurf' | 'cursor' | 'claude-code' | 'codex' | 'copilot' | 'antigravity' | 'kiro';
 
 /** A unified MCP server entry across all agent config formats */
 export interface MCPServerEntry {
