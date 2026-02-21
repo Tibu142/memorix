@@ -1158,24 +1158,113 @@ body {
   color: var(--text-secondary);
 }
 
-/* Observation Detail Section */
+/* Observation Detail Section — smooth expand/collapse */
 .obs-detail {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
-  animation: slideDown 0.2s ease;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
+/* Batch action toolbar */
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.2s ease;
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.batch-toolbar .batch-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.batch-toolbar button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+}
+
+.batch-toolbar .batch-delete-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--accent-red);
+}
+
+.batch-toolbar .batch-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--accent-red);
+}
+
+.batch-toolbar .batch-cancel-btn {
+  background: transparent;
+  border-color: var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.batch-toolbar .batch-cancel-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+/* Low quality indicator */
+.obs-card.low-quality {
+  border-left: 3px solid var(--accent-amber);
+  opacity: 0.7;
+}
+
+.obs-card.low-quality:hover {
+  opacity: 1;
+}
+
+.low-quality-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Batch select checkbox */
+.obs-checkbox {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-medium);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.obs-checkbox:checked {
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+
+.obs-checkbox:checked::after {
+  content: '✓';
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  color: #000;
+  line-height: 14px;
+  font-weight: bold;
 }
 
 .obs-detail-section {
@@ -1194,6 +1283,7 @@ body {
 
 .obs-detail-section .obs-card-narrative {
   -webkit-line-clamp: unset;
+  line-clamp: unset;
   white-space: pre-wrap;
   max-height: none;
 }

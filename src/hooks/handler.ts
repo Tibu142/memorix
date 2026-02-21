@@ -196,16 +196,38 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
             'how-it-works': 1,
           };
 
-          // Sort by priority then recency
+          // Filter out low-quality auto-generated observations
+          // These are hook-generated template titles that don't carry specific knowledge
+          const LOW_QUALITY_PATTERNS = [
+            /^Session activity/i,
+            /^Updated \S+\.\w+$/i,      // "Updated foo.ts" — too generic
+            /^Created \S+\.\w+$/i,       // "Created bar.js"
+            /^Deleted \S+\.\w+$/i,
+            /^Modified \S+\.\w+$/i,
+          ];
+          const isLowQuality = (title: string) =>
+            LOW_QUALITY_PATTERNS.some(p => p.test(title));
+
+          // Score: priority × quality × recency
           const scored = allObs
-            .map((obs, i) => ({
-              obs,
-              priority: PRIORITY_ORDER[obs.type ?? ''] ?? 0,
-              recency: i, // higher index = more recent
-            }))
+            .map((obs, i) => {
+              const title = obs.title ?? '';
+              const hasFacts = (obs.facts?.length ?? 0) > 0;
+              const hasSubstance = title.length > 20 || hasFacts;
+              const quality = isLowQuality(title) ? 0.1 : hasSubstance ? 1.0 : 0.5;
+
+              return {
+                obs,
+                priority: PRIORITY_ORDER[obs.type ?? ''] ?? 0,
+                quality,
+                recency: i, // higher index = more recent
+              };
+            })
             .sort((a, b) => {
-              // priority first, then recency
-              if (b.priority !== a.priority) return b.priority - a.priority;
+              // Weighted score: priority × quality first, then recency
+              const scoreA = a.priority * a.quality;
+              const scoreB = b.priority * b.quality;
+              if (scoreB !== scoreA) return scoreB - scoreA;
               return b.recency - a.recency;
             });
 

@@ -31,6 +31,7 @@ const i18n = {
     nodes: 'nodes',
     edges: 'edges',
     clickNodeToView: 'Click a node to view details',
+    legend: 'Legend',
     noObservations: 'No observations',
     noRelations: 'No relations',
 
@@ -45,6 +46,11 @@ const i18n = {
     exportData: 'Export',
     deleteObs: 'Delete',
     deleteConfirm: 'Delete observation #%id%?',
+    batchCleanup: 'Cleanup',
+    selected: 'selected',
+    cancel: 'Cancel',
+    deleteSelected: 'Delete Selected',
+    batchDeleteConfirm: 'Delete %count% observations?',
     deleted: 'Deleted',
     narrative: 'Narrative',
     facts: 'Facts',
@@ -100,6 +106,7 @@ const i18n = {
     nodes: '个节点',
     edges: '条边',
     clickNodeToView: '点击节点查看详情',
+    legend: '图例',
     noObservations: '暂无观察',
     noRelations: '暂无关系',
 
@@ -114,6 +121,11 @@ const i18n = {
     exportData: '导出',
     deleteObs: '删除',
     deleteConfirm: '确认删除观察 #%id%？',
+    batchCleanup: '清理',
+    selected: '已选中',
+    cancel: '取消',
+    deleteSelected: '删除选中',
+    batchDeleteConfirm: '确认删除 %count% 条观察？',
     deleted: '已删除',
     narrative: '叙述',
     facts: '事实',
@@ -632,6 +644,11 @@ function renderGraph(graph) {
     for (const node of nodes) {
       const active = node === hoveredNode || node === selectedNode;
 
+      // Legend hover dimming
+      if (node._dimmed) {
+        ctx.globalAlpha = 0.15;
+      }
+
       // Glow + dashed ring
       if (active) {
         const pr = node.radius + 12 + Math.sin(pulsePhase * 3) * 3;
@@ -686,10 +703,90 @@ function renderGraph(graph) {
         ctx.fillText(String(node.observations.length), bx, by);
         ctx.textBaseline = 'alphabetic';
       }
+
+      // Reset alpha after dimming
+      ctx.globalAlpha = 1;
     }
 
     if (selectedNode && !animating) requestAnimationFrame(draw);
   }
+
+  // --- Knowledge Graph Legend ---
+  function buildLegend() {
+    let existing = container.querySelector('.graph-legend');
+    if (existing) existing.remove();
+
+    const legend = document.createElement('div');
+    legend.className = 'graph-legend';
+    legend.style.cssText = `
+      position: absolute; top: 12px; right: 12px; z-index: 10;
+      background: var(--glass-bg, rgba(15,15,30,0.85));
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+      border-radius: 12px; padding: 12px 14px; min-width: 140px;
+      font-family: 'Inter', sans-serif; font-size: 11px;
+      color: var(--text-secondary, #94a3b8);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      transition: opacity 0.3s;
+    `;
+
+    // Type stats
+    const typeCount = {};
+    nodes.forEach(n => { typeCount[n.type] = (typeCount[n.type] || 0) + 1; });
+
+    // Title
+    const title = document.createElement('div');
+    title.style.cssText = 'font-weight: 600; font-size: 11px; margin-bottom: 8px; color: var(--text-primary, #e2e8f0); letter-spacing: 0.5px; text-transform: uppercase;';
+    title.textContent = t('legend') || 'Legend';
+    legend.appendChild(title);
+
+    // Type entries
+    Object.entries(typeCount)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([type, count]) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-radius: 6px; cursor: pointer; transition: background 0.2s;';
+
+        const dot = document.createElement('span');
+        dot.style.cssText = `width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: ${typeColors[type] || '#666'}; box-shadow: 0 0 6px ${typeColors[type] || '#666'}44;`;
+
+        const label = document.createElement('span');
+        label.style.cssText = 'flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+        label.textContent = type;
+
+        const badge = document.createElement('span');
+        badge.style.cssText = 'font-size: 10px; opacity: 0.6;';
+        badge.textContent = count;
+
+        row.appendChild(dot);
+        row.appendChild(label);
+        row.appendChild(badge);
+
+        // Hover to highlight same-type nodes
+        row.addEventListener('mouseenter', () => {
+          row.style.background = 'rgba(255,255,255,0.06)';
+          nodes.forEach(n => { n._dimmed = n.type !== type; });
+          draw();
+        });
+        row.addEventListener('mouseleave', () => {
+          row.style.background = '';
+          nodes.forEach(n => { n._dimmed = false; });
+          draw();
+        });
+
+        legend.appendChild(row);
+      });
+
+    // Stats footer
+    const stats = document.createElement('div');
+    stats.style.cssText = 'margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 10px; opacity: 0.5;';
+    stats.textContent = `${nodes.length} nodes · ${edges.length} edges`;
+    legend.appendChild(stats);
+
+    container.style.position = 'relative';
+    container.appendChild(legend);
+  }
+  buildLegend();
 
   function showDetail(node) {
     const panel = document.getElementById('graph-detail');
@@ -775,6 +872,85 @@ function renderGraph(graph) {
 let allObservations = [];
 let obsFilter = '';
 let obsTypeFilter = '';
+let batchMode = false;
+let selectedIds = new Set();
+
+// Low quality detection (same patterns as CLI cleanup)
+const LOW_QUALITY_OBS_PATTERNS = [
+  /^Session activity/i,
+  /^Updated \S+\.\w+$/i,
+  /^Created \S+\.\w+$/i,
+  /^Deleted \S+\.\w+$/i,
+  /^Modified \S+\.\w+$/i,
+  /^Ran command:/i,
+  /^Read file:/i,
+];
+function isLowQualityObs(title) {
+  return LOW_QUALITY_OBS_PATTERNS.some(p => p.test(title.trim()));
+}
+
+function renderBatchToolbar() {
+  const slot = document.getElementById('batch-toolbar-slot');
+  if (!slot) return;
+  if (!batchMode || selectedIds.size === 0) {
+    slot.innerHTML = '';
+    return;
+  }
+  slot.innerHTML = `
+    <div class="batch-toolbar">
+      <span class="batch-count">${selectedIds.size} ${t('selected') || 'selected'}</span>
+      <button class="batch-cancel-btn" onclick="exitBatchMode()">${t('cancel') || 'Cancel'}</button>
+      <button class="batch-delete-btn" onclick="batchDeleteSelected()">🗑️ ${t('deleteSelected') || 'Delete Selected'}</button>
+    </div>
+  `;
+}
+
+async function batchDeleteSelected() {
+  if (selectedIds.size === 0) return;
+  const msg = (t('batchDeleteConfirm') || 'Delete %count% observations?').replace('%count%', selectedIds.size);
+  if (!confirm(msg)) return;
+
+  const sep = selectedProject ? `?project=${encodeURIComponent(selectedProject)}` : '';
+  let deleted = 0;
+  for (const id of selectedIds) {
+    try {
+      const res = await fetch(`/api/observations/${id}${sep}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) deleted++;
+    } catch { /* ignore individual failures */ }
+  }
+
+  allObservations = allObservations.filter(o => !selectedIds.has(o.id));
+  selectedIds.clear();
+  batchMode = false;
+  renderObsList();
+  renderBatchToolbar();
+
+  // Update counter
+  const subtitle = document.querySelector('#page-observations .page-subtitle');
+  if (subtitle) subtitle.textContent = `${allObservations.length} ${t('observationsStored')}`;
+}
+
+function exitBatchMode() {
+  batchMode = false;
+  selectedIds.clear();
+  renderObsList();
+  renderBatchToolbar();
+}
+
+function toggleObsSelect(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+  } else {
+    selectedIds.add(id);
+  }
+  renderBatchToolbar();
+}
+
+// Make batch functions globally accessible
+window.exitBatchMode = exitBatchMode;
+window.batchDeleteSelected = batchDeleteSelected;
+window.toggleObsSelect = toggleObsSelect;
 
 async function loadObservations() {
   const container = document.getElementById('page-observations');
@@ -797,11 +973,18 @@ async function loadObservations() {
         <h1 class="page-title">${t('observations')}</h1>
         <p class="page-subtitle">${allObservations.length} ${t('observationsStored')}</p>
       </div>
-      <button class="export-btn" id="btn-export" title="${t('exportData')}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4 7l4 4 4-4M2 12v2h12v-2"/></svg>
-        ${t('exportData')}
-      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="export-btn" id="btn-batch-cleanup" title="${t('batchCleanup') || 'Batch Cleanup'}">
+          🧹 ${t('batchCleanup') || 'Cleanup'}
+        </button>
+        <button class="export-btn" id="btn-export" title="${t('exportData')}">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4 7l4 4 4-4M2 12v2h12v-2"/></svg>
+          ${t('exportData')}
+        </button>
+      </div>
     </div>
+
+    <div id="batch-toolbar-slot"></div>
 
     <div class="search-bar">
       <input class="search-input" id="obs-search" type="text" placeholder="${t('searchObservations')}" />
@@ -816,6 +999,22 @@ async function loadObservations() {
   document.getElementById('btn-export').addEventListener('click', () => {
     const sep = selectedProject ? `?project=${encodeURIComponent(selectedProject)}` : '';
     window.open(`/api/export${sep}`, '_blank');
+  });
+
+  // Batch cleanup: enter batch mode, auto-select low-quality observations
+  document.getElementById('btn-batch-cleanup').addEventListener('click', () => {
+    batchMode = !batchMode;
+    if (batchMode) {
+      // Auto-select low quality ones
+      selectedIds.clear();
+      allObservations.forEach(obs => {
+        if (isLowQualityObs(obs.title || '')) selectedIds.add(obs.id);
+      });
+    } else {
+      selectedIds.clear();
+    }
+    renderObsList();
+    renderBatchToolbar();
   });
 
   document.getElementById('obs-search').addEventListener('input', (e) => {
@@ -865,13 +1064,18 @@ function renderObsList() {
     return;
   }
 
-  list.innerHTML = filtered.map(obs => `
-    <div class="obs-card" data-obs-id="${obs.id}">
+  list.innerHTML = filtered.map(obs => {
+    const isLow = isLowQualityObs(obs.title || '');
+    const isSelected = selectedIds.has(obs.id);
+    return `
+    <div class="obs-card${isLow ? ' low-quality' : ''}" data-obs-id="${obs.id}">
       <div class="obs-card-header" onclick="toggleObsDetail(${obs.id})">
+        ${batchMode ? `<input type="checkbox" class="obs-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleObsSelect(${obs.id}); this.checked = !this.checked;" />` : ''}
         <span class="obs-card-id">#${obs.id}</span>
         <span class="type-badge" data-type="${obs.type || 'unknown'}">
           ${typeIcons[obs.type] || '❓'} ${obs.type || 'unknown'}
         </span>
+        ${isLow ? '<span class="low-quality-badge">low quality</span>' : ''}
         <span class="obs-card-title">${escapeHtml(obs.title || t('untitled'))}</span>
         <span class="obs-expand-icon">▼</span>
       </div>
@@ -893,7 +1097,8 @@ function renderObsList() {
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ============================================================
@@ -991,9 +1196,30 @@ function toggleObsDetail(id) {
   const card = detail?.closest('.obs-card');
   if (!detail || !card) return;
 
-  const isOpen = detail.style.display !== 'none';
-  detail.style.display = isOpen ? 'none' : 'block';
-  card.classList.toggle('expanded', !isOpen);
+  const isOpen = card.classList.contains('expanded');
+
+  if (isOpen) {
+    // Collapse with animation
+    detail.style.maxHeight = detail.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      detail.style.maxHeight = '0';
+      detail.style.opacity = '0';
+    });
+    setTimeout(() => { detail.style.display = 'none'; }, 300);
+    card.classList.remove('expanded');
+  } else {
+    // Expand with animation
+    detail.style.display = 'block';
+    detail.style.maxHeight = '0';
+    detail.style.opacity = '0';
+    requestAnimationFrame(() => {
+      detail.style.maxHeight = detail.scrollHeight + 'px';
+      detail.style.opacity = '1';
+    });
+    // Remove max-height constraint after animation
+    setTimeout(() => { detail.style.maxHeight = 'none'; }, 300);
+    card.classList.add('expanded');
+  }
 
   // Rotate expand icon
   const icon = card.querySelector('.obs-expand-icon');
