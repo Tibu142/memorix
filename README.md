@@ -46,6 +46,27 @@ Add Memorix to your agent's MCP config — **that's it**. No global install need
 
 Restart your agent and Memorix is running! 🎉
 
+> **Windsurf timeout troubleshooting**
+> 
+> If you see `MCP server initialization timed out after 60 seconds`, keep the same `npx` config but add `--cwd` to force project root:
+> 
+> ```json
+> {
+>   "mcpServers": {
+>     "memorix": {
+>       "command": "npx",
+>       "args": [
+>         "-y",
+>         "memorix@latest",
+>         "serve",
+>         "--cwd",
+>         "<your-project-path>"
+>       ]
+>     }
+>   }
+> }
+> ```
+
 > 💡 More agent configs: [Cursor](#cursor) • [Claude Code](#claude-code) • [Codex](#codex) • [VS Code Copilot](#vs-code-copilot) • [Antigravity](#antigravity) • [Kiro](#kiro)
 
 ### Or Install Globally
