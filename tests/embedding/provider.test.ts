@@ -6,7 +6,15 @@
  * that the system works correctly WITHOUT it (fulltext fallback).
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock embedding providers to simulate them not being installed
+vi.mock('../../src/embedding/fastembed-provider.js', () => {
+  throw new Error('fastembed not installed (mocked)');
+});
+vi.mock('../../src/embedding/transformers-provider.js', () => {
+  throw new Error('transformers not installed (mocked)');
+});
 import { getEmbeddingProvider, isVectorSearchAvailable, resetProvider } from '../../src/embedding/provider.js';
 import { resetDb, isEmbeddingEnabled, generateEmbedding, getDb } from '../../src/store/orama-store.js';
 
@@ -72,7 +80,7 @@ describe('Embedding Provider', () => {
       resetProvider();
       // Should be re-initializable
       const provider = await getEmbeddingProvider();
-      expect(provider).toBeNull(); // still null since fastembed not installed
+      expect(provider).toBeNull(); // still null since providers are mocked out
     });
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "memorix",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "description": "Cross-Agent Memory Bridge — Universal memory layer for AI coding agents via MCP. Knowledge graph, progressive disclosure search, workspace sync, and auto-memory hooks across Windsurf, Cursor, Claude Code, Codex, Copilot, Antigravity, and Kiro.",
   "type": "module",
   "sideEffects": false,
@@ -74,26 +74,27 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@clack/prompts": "^0.9.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@orama/orama": "^3.1.0",
     "@orama/plugin-data-persistence": "^3.1.0",
+    "citty": "^0.1.6",
+    "diff": "^7.0.0",
     "gpt-tokenizer": "^2.8.0",
     "gray-matter": "^4.0.3",
     "remark": "^15.0.1",
     "remark-stringify": "^11.0.0",
-    "diff": "^7.0.0",
-    "citty": "^0.1.6",
-    "@clack/prompts": "^0.9.1",
     "zod": "^3.24.0"
   },
   "optionalDependencies": {
-    "fastembed": "^1.0.0"
+    "@huggingface/transformers": "^3.0.0",
+    "fastembed": "^1.14.4"
   },
   "devDependencies": {
-    "tsup": "^8.4.0",
-    "vitest": "^3.0.0",
-    "typescript": "^5.7.0",
     "@types/diff": "^7.0.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }

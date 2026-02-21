@@ -97,6 +97,7 @@ Then use `"command": "memorix"` instead of `"command": "npx"` in your config.
 - **MCP Config Migration** — Detect and migrate MCP server configs (merges — never overwrites)
 - **Rules Sync** — Scan → Deduplicate → Conflict detection → Cross-format generation
 - **Skills & Workflows** — Copy skill folders and workflow files across agents
+- **Memory-Driven Skills** — `memorix_skills` auto-generates project-specific `SKILL.md` from observation patterns (gotchas, decisions, how-it-works)
 - **Apply with Safety** — Backup `.bak` → Atomic write → Auto-rollback on failure
 
 ### 🔒 Project Isolation
@@ -112,8 +113,11 @@ Then use `"command": "memorix"` instead of `"command": "npx"` in your config.
 - **Web Dashboard** — `memorix_dashboard` opens a beautiful web UI at `http://localhost:3210`
 - **Project Switcher** — Dropdown to view any project's data without switching IDEs
 - **Knowledge Graph** — Interactive visualization of entities and relations
+- **Type Distribution Chart** — Canvas donut chart showing observation type breakdown
+- **Embedding Status** — Real-time display of vector search provider status (enabled/provider/dimensions)
 - **Retention Scores** — Exponential decay scoring with immunity status
-- **Observation Management** — Expand/collapse details, search, delete with confirmation, data export
+- **Observation Management** — Expand/collapse details, **search with text highlighting**, delete with confirmation, data export
+- **Batch Cleanup** — Auto-detect and bulk-delete low-quality observations
 - **Light/Dark Theme** — Premium glassmorphism design, bilingual (EN/中文)
 
 ### 🪝 Auto-Memory Hooks
@@ -327,15 +331,26 @@ Files: ["src/auth/jwt.ts", "src/config.ts"]
 
 ## 🔮 Optional: Vector Search
 
-Install `fastembed` for hybrid (BM25 + semantic) search:
+Memorix supports **hybrid search** (BM25 + semantic vectors) with a provider priority chain:
+
+| Priority | Provider | How to Enable | Notes |
+|----------|----------|---------------|-------|
+| 1st | `fastembed` | `npm install -g fastembed` | Fastest, native ONNX bindings |
+| 2nd | `transformers.js` | `npm install -g @huggingface/transformers` | Pure JS/WASM, cross-platform |
+| Fallback | Full-text (BM25) | Always available | Already very effective for code |
 
 ```bash
+# Option A: Native speed (recommended if it installs cleanly)
 npm install -g fastembed
+
+# Option B: Universal compatibility (works everywhere, no native deps)
+npm install -g @huggingface/transformers
 ```
 
-- **Without it** — BM25 full-text search (already very effective for code)
-- **With it** — Queries like "authentication" also match "login flow" via semantic similarity
-- Local ONNX inference, zero API calls, zero privacy risk
+- **Without either** — BM25 full-text search works great out of the box
+- **With any provider** — Queries like "authentication" also match "login flow" via semantic similarity
+- Both run **locally** — zero API calls, zero privacy risk, zero cost
+- The dashboard shows which provider is active in real-time
 
 ---
 
@@ -379,7 +394,8 @@ src/
 ├── memory/                # Graph, observations, retention, entity extraction
 ├── store/                 # Orama search engine + disk persistence
 ├── compact/               # 3-layer Progressive Disclosure engine
-├── embedding/             # Optional fastembed vector provider
+├── embedding/             # Vector providers (fastembed → transformers.js → fallback)
+├── skills/                # Memory-driven project skills engine (list → generate → inject)
 ├── hooks/                 # Auto-memory hooks (normalizer + pattern detector)
 ├── workspace/             # Cross-agent MCP/workflow/skills sync
 ├── rules/                 # Cross-agent rules sync (7 adapters)

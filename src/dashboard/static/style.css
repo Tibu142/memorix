@@ -1333,3 +1333,16 @@ body {
   border-color: var(--accent-red);
   opacity: 1;
 }
+
+/* Search highlight */
+mark {
+  background: rgba(245, 158, 11, 0.25);
+  color: inherit;
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+[data-theme="light"] mark {
+  background: rgba(245, 158, 11, 0.35);
+}

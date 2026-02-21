@@ -91,7 +91,7 @@ async function handleApi(
                     const entries = await fs.readdir(baseDir, { withFileTypes: true });
                     const projects = entries
                         .filter((e: { isDirectory: () => boolean; name: string }) =>
-                            e.isDirectory() && e.name.includes('--'))  // Only git-based projects (owner--repo)
+                            e.isDirectory() && e.name.includes('--') && !e.name.startsWith('local--'))  // Only git-based projects, skip local fallback dirs
                         .map((e: { name: string }) => {
                             const dirName = e.name;
                             const id = dirName.replace(/--/g, '/');
@@ -145,6 +145,19 @@ async function handleApi(
                     .sort((a, b) => (b.id || 0) - (a.id || 0))
                     .slice(0, 10);
 
+                // Embedding provider status
+                let embeddingStatus = { enabled: false, provider: '', dimensions: 0 };
+                try {
+                    const { isEmbeddingEnabled } = await import('../store/orama-store.js');
+                    const { getEmbeddingProvider } = await import('../embedding/provider.js');
+                    const provider = await getEmbeddingProvider();
+                    embeddingStatus = {
+                        enabled: isEmbeddingEnabled(),
+                        provider: provider?.name || '',
+                        dimensions: provider?.dimensions || 0,
+                    };
+                } catch { /* embedding module not available */ }
+
                 sendJson(res, {
                     entities: graph.entities.length,
                     relations: graph.relations.length,
@@ -152,6 +165,7 @@ async function handleApi(
                     nextId,
                     typeCounts,
                     recentObservations: sorted,
+                    embedding: embeddingStatus,
                 });
                 break;
             }

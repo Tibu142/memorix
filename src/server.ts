@@ -861,6 +861,140 @@ export async function createMemorixServer(cwd?: string): Promise<{
   );
 
   // ============================================================
+  // memorix_skills — Memory-driven project skills
+  // ============================================================
+
+  server.registerTool(
+    'memorix_skills',
+    {
+      title: 'Project Skills',
+      description:
+        'Memory-driven project skills. ' +
+        'Action "list": show all available skills from all agents. ' +
+        'Action "generate": auto-generate project-specific skills from observation patterns (gotchas, decisions, how-it-works). ' +
+        'Action "inject": return a specific skill\'s full content for direct use. ' +
+        'Generated skills follow the SKILL.md standard and can be synced across agents.',
+      inputSchema: {
+        action: z.enum(['list', 'generate', 'inject']).describe('Action: "list" to discover skills, "generate" to create from memory, "inject" to get skill content'),
+        name: z.string().optional().describe('Skill name (required for "inject")'),
+        target: z.enum(AGENT_TARGETS).optional().describe('Target agent to write generated skills to (optional for "generate")'),
+        write: z.boolean().optional().describe('Whether to write generated skills to disk (default: false, preview only)'),
+      },
+    },
+    async ({ action, name, target, write }) => {
+      const { SkillsEngine } = await import('./skills/engine.js');
+      const engine = new SkillsEngine(project.rootPath);
+
+      if (action === 'list') {
+        const skills = engine.listSkills();
+        if (skills.length === 0) {
+          return {
+            content: [{ type: 'text' as const, text: 'No skills found in any agent directory.\n\nSkills are discovered from:\n- `.cursor/skills/*/SKILL.md`\n- `.agents/skills/*/SKILL.md`\n- `.agent/skills/*/SKILL.md`\n- `.windsurf/skills/*/SKILL.md`\n- etc.\n\nUse action "generate" to auto-create skills from your project observations.' }],
+          };
+        }
+
+        const lines = [
+          `## Available Skills (${skills.length})`,
+          '',
+        ];
+        for (const sk of skills) {
+          lines.push(`- **${sk.name}** (${sk.sourceAgent}): ${sk.description || '(no description)'}`);
+        }
+        lines.push('', '> Use `action: "inject", name: "<skill-name>"` to get full skill content.');
+
+        return {
+          content: [{ type: 'text' as const, text: lines.join('\n') }],
+        };
+      }
+
+      if (action === 'inject') {
+        if (!name) {
+          return {
+            content: [{ type: 'text' as const, text: 'Error: `name` is required for inject action. Use `action: "list"` first to see available skills.' }],
+            isError: true,
+          };
+        }
+
+        const skill = engine.injectSkill(name);
+        if (!skill) {
+          return {
+            content: [{ type: 'text' as const, text: `Skill "${name}" not found. Use \`action: "list"\` to see available skills.` }],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [{ type: 'text' as const, text: `## Skill: ${skill.name}\n**Source**: ${skill.sourceAgent}\n**Path**: ${skill.sourcePath}\n\n---\n\n${skill.content}` }],
+        };
+      }
+
+      // action === 'generate'
+      const { loadObservationsJson } = await import('./store/persistence.js');
+      const allObs = await loadObservationsJson(projectDir) as Array<{
+        id?: number; entityName?: string; type?: string; title?: string;
+        narrative?: string; facts?: string[]; concepts?: string[];
+        filesModified?: string[]; createdAt?: string;
+      }>;
+
+      const obsData = allObs.map(o => ({
+        id: o.id || 0,
+        entityName: o.entityName || 'unknown',
+        type: o.type || 'discovery',
+        title: o.title || '',
+        narrative: o.narrative || '',
+        facts: o.facts,
+        concepts: o.concepts,
+        filesModified: o.filesModified,
+        createdAt: o.createdAt,
+      }));
+
+      const generated = engine.generateFromObservations(obsData);
+
+      if (generated.length === 0) {
+        return {
+          content: [{ type: 'text' as const, text: 'No skill-worthy patterns found yet.\n\nSkills are auto-generated when entities accumulate enough observations (3+), especially gotchas, decisions, and how-it-works notes.\n\nKeep using memorix_store to build up project knowledge!' }],
+        };
+      }
+
+      const lines = [
+        `## Generated Skills (${generated.length})`,
+        '',
+        'Based on observation patterns in your project memory:',
+        '',
+      ];
+
+      for (const sk of generated) {
+        lines.push(`### ${sk.name}`);
+        lines.push(`- **Description**: ${sk.description}`);
+        lines.push(`- **Observations**: ${sk.content.split('\n').length} lines of knowledge`);
+
+        if (write && target) {
+          const path = engine.writeSkill(sk, target as AgentTarget);
+          if (path) {
+            lines.push(`- ✅ **Written**: \`${path}\``);
+          } else {
+            lines.push(`- ❌ Failed to write`);
+          }
+        }
+        lines.push('');
+      }
+
+      if (!write) {
+        lines.push('> Preview only. Add `write: true, target: "<agent>"` to save skills to disk.');
+      }
+
+      // Show first generated skill as preview
+      if (generated.length > 0) {
+        lines.push('', '---', '### Preview: ' + generated[0].name, '', '```markdown', generated[0].content, '```');
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: lines.join('\n') }],
+      };
+    },
+  );
+
+  // ============================================================
   // memorix_dashboard — Launch the web dashboard
   // ============================================================
 

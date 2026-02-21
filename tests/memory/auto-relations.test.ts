@@ -5,7 +5,13 @@
  * Inspired by mcp-memory-service typed relationships + MemCP MAGMA.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../../src/embedding/provider.js', () => ({
+  getEmbeddingProvider: async () => null,
+  isVectorSearchAvailable: async () => false,
+  resetProvider: () => {},
+}));
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

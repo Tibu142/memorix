@@ -2,10 +2,11 @@
  * Embedding Provider — Abstraction Layer
  *
  * Extensible embedding interface. Supports graceful degradation:
- *   - fastembed installed → local ONNX inference (384-dim bge-small)
- *   - nothing installed   → null provider, search falls back to BM25
+ *   - fastembed installed       → local ONNX inference (384-dim bge-small)
+ *   - @huggingface/transformers → pure JS WASM inference (384-dim MiniLM)
+ *   - nothing installed         → null provider, search falls back to BM25
  *
- * Architecture inspired by MemCP's `get_provider()` pattern.
+ * Architecture inspired by Mem0's multi-provider embedding design.
  * Adding a new embedding backend only requires implementing EmbeddingProvider.
  */
 
@@ -27,19 +28,34 @@ let initialized = false;
 /**
  * Get the embedding provider. Returns null if none available.
  * Lazy-initialized on first call.
+ *
+ * Provider priority:
+ *   1. fastembed (fastest, but requires native ONNX binding)
+ *   2. @huggingface/transformers (pure JS, best cross-platform compatibility)
+ *   3. null → fulltext search only (BM25)
  */
 export async function getEmbeddingProvider(): Promise<EmbeddingProvider | null> {
   if (initialized) return provider;
   initialized = true;
 
-  // Try fastembed first (local ONNX, recommended)
+  // Try fastembed first (local ONNX, fastest)
   try {
     const { FastEmbedProvider } = await import('./fastembed-provider.js');
     provider = await FastEmbedProvider.create();
     console.error(`[memorix] Embedding provider: ${provider!.name} (${provider!.dimensions}d)`);
     return provider;
   } catch {
-    // fastembed not installed — that's fine, degrade gracefully
+    // fastembed not installed — try next
+  }
+
+  // Try @huggingface/transformers (pure JS, no native deps)
+  try {
+    const { TransformersProvider } = await import('./transformers-provider.js');
+    provider = await TransformersProvider.create();
+    console.error(`[memorix] Embedding provider: ${provider!.name} (${provider!.dimensions}d)`);
+    return provider;
+  } catch {
+    // transformers not installed — degrade to fulltext
   }
 
   console.error('[memorix] No embedding provider available — using fulltext search only');

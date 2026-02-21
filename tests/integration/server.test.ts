@@ -7,7 +7,13 @@
  * TDD: Tests the full pipeline, not individual units.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../../src/embedding/provider.js', () => ({
+  getEmbeddingProvider: async () => null,
+  isVectorSearchAvailable: async () => false,
+  resetProvider: () => {},
+}));
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

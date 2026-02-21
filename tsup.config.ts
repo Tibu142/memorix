@@ -10,7 +10,7 @@ export default defineConfig([
     clean: true,
     splitting: false,
     shims: true,
-    external: ['fastembed'],
+    external: ['fastembed', '@huggingface/transformers'],
   },
   {
     entry: { 'cli/index': 'src/cli/index.ts' },
@@ -21,7 +21,7 @@ export default defineConfig([
     splitting: false,
     shims: true,
     banner: { js: '#!/usr/bin/env node' },
-    external: ['fastembed'],
+    external: ['fastembed', '@huggingface/transformers'],
     // Copy dashboard static files after CLI build
     onSuccess: 'node scripts/copy-static.cjs',
   },

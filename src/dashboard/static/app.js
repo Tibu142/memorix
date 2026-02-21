@@ -57,6 +57,10 @@ const i18n = {
     concepts: 'Concepts',
     files: 'Files Modified',
     clickToExpand: 'Click to expand',
+    vectorSearch: 'Vector Search',
+    fulltextOnly: 'Fulltext Only',
+    enabled: 'Enabled',
+    typeDistribution: 'Type Distribution',
 
     // Retention
     memoryRetention: 'Memory Retention',
@@ -132,6 +136,10 @@ const i18n = {
     concepts: '概念',
     files: '相关文件',
     clickToExpand: '点击展开',
+    vectorSearch: '向量搜索',
+    fulltextOnly: '仅全文搜索',
+    enabled: '已启用',
+    typeDistribution: '类型分布',
 
     // Retention
     memoryRetention: '记忆衰减',
@@ -398,6 +406,11 @@ async function loadDashboard() {
         <div class="stat-label">${t('nextId')}</div>
         <div class="stat-value">#${stats.nextId}</div>
       </div>
+      <div class="stat-card" data-accent="${stats.embedding?.enabled ? 'cyan' : 'amber'}">
+        <div class="stat-label">${t('vectorSearch')}</div>
+        <div class="stat-value" style="font-size: 18px;">${stats.embedding?.enabled ? '✓ ' + t('enabled') : t('fulltextOnly')}</div>
+        ${stats.embedding?.provider ? `<div style="font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono);">${stats.embedding.provider} (${stats.embedding.dimensions}d)</div>` : ''}
+      </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -406,16 +419,23 @@ async function loadDashboard() {
           <span class="panel-title">${t('observationTypes')}</span>
         </div>
         <div class="panel-body">
-          ${typeEntries.length > 0 ? typeEntries.map(([type, count]) => `
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-              <span style="width: 20px; text-align: center;">${typeIcons[type] || '❓'}</span>
-              <span style="width: 120px; font-size: 12px; color: var(--text-secondary);">${type}</span>
-              <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px; overflow: hidden;">
-                <div style="width: ${(count / maxTypeCount) * 100}%; height: 100%; background: var(--type-${type}, var(--accent-cyan)); border-radius: 3px;"></div>
+          ${typeEntries.length > 0 ? `
+            <div style="display: flex; gap: 20px; align-items: flex-start;">
+              <canvas id="type-pie-chart" width="140" height="140" style="flex-shrink: 0;"></canvas>
+              <div style="flex: 1;">
+                ${typeEntries.map(([type, count]) => `
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span style="width: 18px; text-align: center; font-size: 13px;">${typeIcons[type] || '❓'}</span>
+                    <span style="width: 110px; font-size: 11px; color: var(--text-secondary);">${type}</span>
+                    <div style="flex: 1; height: 5px; background: rgba(128,128,128,0.1); border-radius: 3px; overflow: hidden;">
+                      <div style="width: ${(count / maxTypeCount) * 100}%; height: 100%; background: var(--type-${type}, var(--accent-cyan)); border-radius: 3px;"></div>
+                    </div>
+                    <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); min-width: 22px; text-align: right;">${count}</span>
+                  </div>
+                `).join('')}
               </div>
-              <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); min-width: 24px; text-align: right;">${count}</span>
             </div>
-          `).join('') : `<p style="color: var(--text-muted); font-size: 13px;">${t('noObservationsYet')}</p>`}
+          ` : `<p style="color: var(--text-muted); font-size: 13px;">${t('noObservationsYet')}</p>`}
         </div>
       </div>
 
@@ -442,6 +462,55 @@ async function loadDashboard() {
       </div>
     </div>
   `;
+
+  // Render pie chart if data exists
+  if (typeEntries.length > 0) {
+    requestAnimationFrame(() => renderPieChart('type-pie-chart', typeEntries, typeIcons));
+  }
+}
+
+/** Draw a mini donut chart on a canvas */
+function renderPieChart(canvasId, entries, icons) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const size = 140;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  ctx.scale(dpr, dpr);
+
+  const cx = size / 2, cy = size / 2, r = 54, inner = 34;
+  const total = entries.reduce((s, e) => s + e[1], 0);
+  const colors = [
+    '#06b6d4', '#a855f7', '#f59e0b', '#22c55e',
+    '#3b82f6', '#ef4444', '#ec4899', '#f97316', '#6366f1',
+  ];
+
+  let angle = -Math.PI / 2;
+  entries.forEach(([type, count], i) => {
+    const slice = (count / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + inner * Math.cos(angle), cy + inner * Math.sin(angle));
+    ctx.arc(cx, cy, r, angle, angle + slice);
+    ctx.arc(cx, cy, inner, angle + slice, angle, true);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    angle += slice;
+  });
+
+  // Center text
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#fff';
+  ctx.font = 'bold 20px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(total, cx, cy - 6);
+  ctx.font = '10px system-ui';
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+  ctx.fillText('total', cx, cy + 10);
 }
 
 // ============================================================
@@ -945,6 +1014,7 @@ function toggleObsSelect(id) {
     selectedIds.add(id);
   }
   renderBatchToolbar();
+  renderObsList();
 }
 
 // Make batch functions globally accessible
@@ -1067,28 +1137,29 @@ function renderObsList() {
   list.innerHTML = filtered.map(obs => {
     const isLow = isLowQualityObs(obs.title || '');
     const isSelected = selectedIds.has(obs.id);
+    const hl = (text) => obsFilter ? escapeHtml(text).replace(new RegExp(`(${escapeHtml(obsFilter).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>') : escapeHtml(text);
     return `
     <div class="obs-card${isLow ? ' low-quality' : ''}" data-obs-id="${obs.id}">
       <div class="obs-card-header" onclick="toggleObsDetail(${obs.id})">
-        ${batchMode ? `<input type="checkbox" class="obs-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleObsSelect(${obs.id}); this.checked = !this.checked;" />` : ''}
+        ${batchMode ? `<input type="checkbox" class="obs-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleObsSelect(${obs.id});" />` : ''}
         <span class="obs-card-id">#${obs.id}</span>
         <span class="type-badge" data-type="${obs.type || 'unknown'}">
           ${typeIcons[obs.type] || '❓'} ${obs.type || 'unknown'}
         </span>
         ${isLow ? '<span class="low-quality-badge">low quality</span>' : ''}
-        <span class="obs-card-title">${escapeHtml(obs.title || t('untitled'))}</span>
+        <span class="obs-card-title">${hl(obs.title || t('untitled'))}</span>
         <span class="obs-expand-icon">▼</span>
       </div>
       <div class="obs-card-meta">
-        <span>📁 ${escapeHtml(obs.entityName || 'unknown')}</span>
+        <span>📁 ${hl(obs.entityName || 'unknown')}</span>
         ${obs.createdAt ? `<span>🕐 ${formatTime(obs.createdAt)}</span>` : ''}
         ${obs.accessCount ? `<span>👁 ${obs.accessCount}</span>` : ''}
       </div>
       <div class="obs-detail" id="obs-detail-${obs.id}" style="display:none;">
-        ${obs.narrative ? `<div class="obs-detail-section"><label>${t('narrative')}</label><div class="obs-card-narrative">${escapeHtml(obs.narrative)}</div></div>` : ''}
-        ${obs.facts && obs.facts.length > 0 ? `<div class="obs-detail-section"><label>${t('facts')}</label><div class="obs-card-facts">${obs.facts.map(f => `<span class="fact-tag">${escapeHtml(f)}</span>`).join('')}</div></div>` : ''}
-        ${obs.concepts && obs.concepts.length > 0 ? `<div class="obs-detail-section"><label>${t('concepts')}</label><div class="obs-card-facts">${obs.concepts.map(c => `<span class="fact-tag concept-tag">${escapeHtml(c)}</span>`).join('')}</div></div>` : ''}
-        ${obs.filesModified && obs.filesModified.length > 0 ? `<div class="obs-detail-section"><label>${t('files')}</label><div class="obs-card-facts">${obs.filesModified.map(f => `<span class="fact-tag file-tag">${escapeHtml(f)}</span>`).join('')}</div></div>` : ''}
+        ${obs.narrative ? `<div class="obs-detail-section"><label>${t('narrative')}</label><div class="obs-card-narrative">${hl(obs.narrative)}</div></div>` : ''}
+        ${obs.facts && obs.facts.length > 0 ? `<div class="obs-detail-section"><label>${t('facts')}</label><div class="obs-card-facts">${obs.facts.map(f => `<span class="fact-tag">${hl(f)}</span>`).join('')}</div></div>` : ''}
+        ${obs.concepts && obs.concepts.length > 0 ? `<div class="obs-detail-section"><label>${t('concepts')}</label><div class="obs-card-facts">${obs.concepts.map(c => `<span class="fact-tag concept-tag">${hl(c)}</span>`).join('')}</div></div>` : ''}
+        ${obs.filesModified && obs.filesModified.length > 0 ? `<div class="obs-detail-section"><label>${t('files')}</label><div class="obs-card-facts">${obs.filesModified.map(f => `<span class="fact-tag file-tag">${hl(f)}</span>`).join('')}</div></div>` : ''}
         <div class="obs-detail-actions">
           <button class="delete-btn" onclick="deleteObs(${obs.id}, event)">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v5M10 7v5M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9"/></svg>

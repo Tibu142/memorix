@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] — 2026-02-21
+
+### Added
+- **Memory-Driven Skills Engine** (`memorix_skills` MCP tool):
+  - `list` — Discover all `SKILL.md` files across 7 agent directories
+  - `generate` — Auto-generate project-specific skills from observation patterns (gotchas, decisions, how-it-works)
+  - `inject` — Return full skill content directly to agent context
+  - Intelligent scoring: requires skill-worthy observation types, not just volume
+  - Write to any target agent with `write: true, target: "<agent>"`
+- **Transformers.js Embedding Provider**:
+  - Pure JavaScript fallback (`@huggingface/transformers`) — no native deps required
+  - Provider chain: `fastembed` → `transformers.js` → fulltext-only
+  - Quantized model (`q8`) for small footprint
+- **Dashboard Enhancements**:
+  - Canvas donut chart for observation type distribution
+  - Embedding provider status card (enabled/provider/dimensions)
+  - Search result highlighting with `<mark>` tags
+- **17 new tests** for Skills Engine (list, generate, inject, write, scoring, dedup)
+
+### Changed
+- Scoring algorithm requires at least 1 skill-worthy type (gotcha/decision/how-it-works/problem-solution/trade-off) — pure discovery/what-changed entities won't generate skills
+- Volume bonus reduced from 2×obs to 1×obs (capped at 5) to favor quality over quantity
+- Type diversity bonus increased from 2 to 3 points per unique skill-worthy type
+
+### Fixed
+- 422 tests passing (up from 405), 34 test files, zero regressions
+
 ## [0.5.0] — 2026-02-15
 
 ### Added

@@ -5,7 +5,13 @@
  * Based on claude-mem's proven architecture.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../../src/embedding/provider.js', () => ({
+  getEmbeddingProvider: async () => null,
+  isVectorSearchAvailable: async () => false,
+  resetProvider: () => {},
+}));
 import { compactSearch, compactDetail } from '../../src/compact/engine.js';
 import { storeObservation, initObservations } from '../../src/memory/observations.js';
 import { resetDb } from '../../src/store/orama-store.js';
