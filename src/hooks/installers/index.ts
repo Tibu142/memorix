@@ -335,7 +335,7 @@ async function installAgentRules(agent: AgentName, projectRoot: string): Promise
       rulesPath = path.join(projectRoot, 'AGENTS.md');
       break;
     case 'kiro':
-      rulesPath = path.join(projectRoot, '.kiro', 'rules', 'memorix.md');
+      rulesPath = path.join(projectRoot, '.kiro', 'steering', 'memorix.md');
       break;
     default:
       // Antigravity and others

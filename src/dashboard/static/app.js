@@ -611,6 +611,20 @@ function renderGraph(graph) {
         ctx.fillStyle = colors.edgeLabel;
         ctx.textAlign = 'center';
         ctx.fillText(edge.type, mx + ox, my + oy - 6);
+
+        // Flowing particle animation along active edges
+        const particleCount = 2;
+        for (let p = 0; p < particleCount; p++) {
+          const t = ((pulsePhase * 0.5 + p / particleCount) % 1);
+          // Quadratic bezier interpolation: source → control → target
+          const cx = mx + ox, cy = my + oy;
+          const px = (1 - t) * (1 - t) * edge.source.x + 2 * (1 - t) * t * cx + t * t * edge.target.x;
+          const py = (1 - t) * (1 - t) * edge.source.y + 2 * (1 - t) * t * cy + t * t * edge.target.y;
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fillStyle = (edge.source.color || '#00d4ff') + 'cc';
+          ctx.fill();
+        }
       }
     }
 

@@ -12,6 +12,17 @@ import type { AgentName, HookEvent, NormalizedHookInput } from './types.js';
  * Map agent-specific event names → normalized event names.
  */
 const EVENT_MAP: Record<string, HookEvent> = {
+  // Identity mappings — already-normalized event names
+  // This allows direct payloads like { event: 'session_start' } to work
+  session_start: 'session_start',
+  user_prompt: 'user_prompt',
+  post_edit: 'post_edit',
+  post_command: 'post_command',
+  post_tool: 'post_tool',
+  pre_compact: 'pre_compact',
+  session_end: 'session_end',
+  post_response: 'post_response',
+
   // Claude Code / VS Code Copilot
   SessionStart: 'session_start',
   UserPromptSubmit: 'user_prompt',
@@ -189,9 +200,13 @@ function normalizeCursor(payload: Record<string, unknown>, event: HookEvent): Pa
  * Main normalizer: convert any agent's stdin payload → NormalizedHookInput.
  */
 export function normalizeHookInput(payload: Record<string, unknown>): NormalizedHookInput {
+  // Support direct/standard payloads: { event: 'session_start', cwd: '...' }
+  // This is used by MCP server internals, CLI, and testing scenarios.
+  const directEvent = typeof payload.event === 'string' ? EVENT_MAP[payload.event] : undefined;
+
   const agent = detectAgent(payload);
   const rawEventName = extractEventName(payload, agent);
-  const event: HookEvent = EVENT_MAP[rawEventName] ?? 'post_tool';
+  const event: HookEvent = directEvent ?? EVENT_MAP[rawEventName] ?? 'post_tool';
   const timestamp = (payload.timestamp as string) ?? new Date().toISOString();
 
   let agentSpecific: Partial<NormalizedHookInput> = {};

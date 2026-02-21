@@ -7,7 +7,7 @@
     <a href="https://www.npmjs.com/package/memorix"><img src="https://img.shields.io/npm/dm/memorix.svg?style=flat-square&color=blue" alt="npm downloads"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
     <a href="https://github.com/AVIDS2/memorix"><img src="https://img.shields.io/github/stars/AVIDS2/memorix?style=flat-square&color=yellow" alt="GitHub stars"></a>
-    <img src="https://img.shields.io/badge/tests-274%20passed-brightgreen?style=flat-square" alt="Tests">
+    <img src="https://img.shields.io/badge/tests-405%20passed-brightgreen?style=flat-square" alt="Tests">
   </p>
   <p align="center">
     <a href="#-quick-start">Quick Start</a> •
@@ -20,9 +20,9 @@
 
 ---
 
-> **One project, six agents, zero context loss.**
+> **One project, seven agents, zero context loss.**
 >
-> Memorix is a **cross-agent memory bridge** — it lets Cursor, Windsurf, Claude Code, Codex, Copilot, and Antigravity **share the same project knowledge** in real-time. Architecture decisions made in one IDE are instantly available in another. Switch tools, open new windows, start fresh sessions — your context follows you everywhere via [MCP](https://modelcontextprotocol.io/). It also **syncs MCP configs, rules, skills, and workflows** across all your agents automatically.
+> Memorix is a **cross-agent memory bridge** — it lets Cursor, Windsurf, Claude Code, Codex, Copilot, Antigravity, and **Kiro** **share the same project knowledge** in real-time. Architecture decisions made in one IDE are instantly available in another. Switch tools, open new windows, start fresh sessions — your context follows you everywhere via [MCP](https://modelcontextprotocol.io/). It also **syncs MCP configs, rules, skills, and workflows** across all your agents automatically.
 
 ---
 
@@ -46,7 +46,7 @@ Add Memorix to your agent's MCP config — **that's it**. No global install need
 
 Restart your agent and Memorix is running! 🎉
 
-> 💡 More agent configs: [Cursor](#cursor) • [Claude Code](#claude-code) • [Codex](#codex) • [VS Code Copilot](#vs-code-copilot) • [Antigravity](#antigravity)
+> 💡 More agent configs: [Cursor](#cursor) • [Claude Code](#claude-code) • [Codex](#codex) • [VS Code Copilot](#vs-code-copilot) • [Antigravity](#antigravity) • [Kiro](#kiro)
 
 ### Or Install Globally
 
@@ -93,7 +93,7 @@ Then use `"command": "memorix"` instead of `"command": "npx"` in your config.
 
 ### 🔄 Cross-Agent Workspace Sync
 
-- **6 Agent Adapters** — Windsurf, Cursor, Claude Code, Codex, VS Code Copilot, Antigravity
+- **7 Agent Adapters** — Windsurf, Cursor, Claude Code, Codex, VS Code Copilot, Antigravity, **Kiro**
 - **MCP Config Migration** — Detect and migrate MCP server configs (merges — never overwrites)
 - **Rules Sync** — Scan → Deduplicate → Conflict detection → Cross-format generation
 - **Skills & Workflows** — Copy skill folders and workflow files across agents
@@ -113,11 +113,13 @@ Then use `"command": "memorix"` instead of `"command": "npx"` in your config.
 - **Project Switcher** — Dropdown to view any project's data without switching IDEs
 - **Knowledge Graph** — Interactive visualization of entities and relations
 - **Retention Scores** — Exponential decay scoring with immunity status
+- **Observation Management** — Expand/collapse details, search, delete with confirmation, data export
 - **Light/Dark Theme** — Premium glassmorphism design, bilingual (EN/中文)
 
 ### 🪝 Auto-Memory Hooks
 
 - **Implicit Memory** — Auto-captures decisions, errors, gotchas from agent activity
+- **Session Start Injection** — Intelligently loads recent high-value memories (gotchas, decisions, problem-solutions) and injects a concise summary into the agent's system prompt at session start
 - **Multi-Language Pattern Detection** — English + Chinese keyword matching
 - **Cooldown & Noise Filtering** — 30s cooldown, skips trivial commands (ls, cat, pwd)
 - **One-Command Install** — `memorix hooks install` sets up hooks + rules for your agent
@@ -204,6 +206,20 @@ args = ["-y", "memorix@latest", "serve"]
 }
 ```
 
+### Kiro
+
+`.kiro/settings/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "npx",
+      "args": ["-y", "memorix@latest", "serve"]
+    }
+  }
+}
+```
+
 ---
 
 ## 🛠 Available MCP Tools
@@ -278,33 +294,33 @@ Files: ["src/auth/jwt.ts", "src/config.ts"]
 ### Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                    AI Coding Agents                           │
-│  Windsurf │ Cursor │ Claude Code │ Codex │ Copilot │ Antigravity
-└────────────────────────┬─────────────────────────────────────┘
-                         │ MCP Protocol (stdio)
-┌────────────────────────▼─────────────────────────────────────┐
-│                 Memorix MCP Server (17 tools)                │
-│                                                              │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │   Memory     │  │   Compact    │  │  Workspace Sync  │   │
-│  │   Layer      │  │   Engine     │  │  (6 adapters)    │   │
-│  │             │  │  (3-layer)   │  │                  │   │
-│  │ • Graph     │  │              │  │ • MCP Configs    │   │
-│  │ • Retention │  │              │  │ • Rules          │   │
-│  │ • Entities  │  │              │  │ • Skills         │   │
-│  │ • Relations │  │              │  │ • Workflows      │   │
-│  └──────┬──────┘  └──────┬───────┘  └──────────────────┘   │
-│         │                │                                   │
-│  ┌──────▼────────────────▼───────────────────────────────┐  │
-│  │  Orama Store (BM25 + Vector) │ Persistence (JSONL)    │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Hooks System: Normalizer → Pattern Detector → Store  │  │
-│  │  (Auto-captures decisions, bugs, gotchas from agents) │  │
-│  └───────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                      AI Coding Agents                              │
+│  Windsurf │ Cursor │ Claude Code │ Codex │ Copilot │ Antigravity │ Kiro
+└───────────────────────────┬───────────────────────────────────────┘
+                            │ MCP Protocol (stdio)
+┌───────────────────────────▼───────────────────────────────────────┐
+│                  Memorix MCP Server (17 tools)                    │
+│                                                                    │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐         │
+│  │   Memory     │  │   Compact    │  │  Workspace Sync  │         │
+│  │   Layer      │  │   Engine     │  │  (7 adapters)    │         │
+│  │             │  │  (3-layer)   │  │                  │         │
+│  │ • Graph     │  │              │  │ • MCP Configs    │         │
+│  │ • Retention │  │              │  │ • Rules          │         │
+│  │ • Entities  │  │              │  │ • Skills         │         │
+│  │ • Relations │  │              │  │ • Workflows      │         │
+│  └──────┬──────┘  └──────┬───────┘  └──────────────────┘         │
+│         │                │                                         │
+│  ┌──────▼────────────────▼───────────────────────────────┐        │
+│  │  Orama Store (BM25 + Vector) │ Persistence (JSONL)    │        │
+│  └───────────────────────────────────────────────────────┘        │
+│                                                                    │
+│  ┌───────────────────────────────────────────────────────┐        │
+│  │  Hooks System: Normalizer → Pattern Detector → Store  │        │
+│  │  (Auto-captures decisions, bugs, gotchas from agents) │        │
+│  └───────────────────────────────────────────────────────┘        │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -349,7 +365,7 @@ cd memorix
 npm install
 
 npm run dev          # tsup watch mode
-npm test             # vitest (274 tests)
+npm test             # vitest (405 tests)
 npm run lint         # TypeScript type check
 npm run build        # Production build
 ```
@@ -366,7 +382,7 @@ src/
 ├── embedding/             # Optional fastembed vector provider
 ├── hooks/                 # Auto-memory hooks (normalizer + pattern detector)
 ├── workspace/             # Cross-agent MCP/workflow/skills sync
-├── rules/                 # Cross-agent rules sync (6 adapters)
+├── rules/                 # Cross-agent rules sync (7 adapters)
 ├── dashboard/             # Visual web dashboard (knowledge graph, stats)
 ├── project/               # Git-based project detection
 └── cli/                   # CLI commands (serve, hook, sync, dashboard)

@@ -167,16 +167,79 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
 
   // Event-specific handling
   switch (input.event) {
-    case 'session_start':
-      // TODO: Search relevant memories and inject via systemMessage
+    case 'session_start': {
+      // Search relevant memories and inject via systemMessage
+      let contextSummary = '';
+      try {
+        const { detectProject } = await import('../project/detector.js');
+        const { getProjectDataDir, loadObservationsJson } = await import('../store/persistence.js');
+
+        const project = await detectProject(input.cwd || process.cwd());
+        const dataDir = await getProjectDataDir(project.id);
+        const allObs = await loadObservationsJson(dataDir) as Array<{
+          type?: string;
+          title?: string;
+          narrative?: string;
+          facts?: string[];
+          timestamp?: string;
+          importance?: number;
+        }>;
+
+        if (allObs.length > 0) {
+          // Priority types: gotcha > decision > problem-solution > trade-off > discovery > others
+          const PRIORITY_ORDER: Record<string, number> = {
+            'gotcha': 6,
+            'decision': 5,
+            'problem-solution': 4,
+            'trade-off': 3,
+            'discovery': 2,
+            'how-it-works': 1,
+          };
+
+          // Sort by priority then recency
+          const scored = allObs
+            .map((obs, i) => ({
+              obs,
+              priority: PRIORITY_ORDER[obs.type ?? ''] ?? 0,
+              recency: i, // higher index = more recent
+            }))
+            .sort((a, b) => {
+              // priority first, then recency
+              if (b.priority !== a.priority) return b.priority - a.priority;
+              return b.recency - a.recency;
+            });
+
+          // Take top 5 most valuable items, budget ~600 tokens
+          const top = scored.slice(0, 5);
+          const TYPE_EMOJI: Record<string, string> = {
+            'gotcha': '🔴', 'decision': '🟤', 'problem-solution': '🟡',
+            'trade-off': '⚖️', 'discovery': '🟣', 'how-it-works': '🔵',
+            'what-changed': '🟢', 'why-it-exists': '🟠', 'session-request': '🎯',
+          };
+
+          const lines = top.map(({ obs }) => {
+            const emoji = TYPE_EMOJI[obs.type ?? ''] ?? '📌';
+            const title = obs.title ?? '(untitled)';
+            // Include first fact if available for extra context
+            const fact = obs.facts?.[0] ? ` — ${obs.facts[0]}` : '';
+            return `${emoji} ${title}${fact}`;
+          });
+
+          contextSummary = `\n\nRecent project memories (${project.name}):\n${lines.join('\n')}`;
+        }
+      } catch {
+        // Silent fail — hooks must never break the agent
+      }
+
       return {
         observation: null,
         output: {
           continue: true,
           systemMessage:
-            'Memorix is active. Your memories from previous sessions are available via memorix_search.',
+            `Memorix is active. Your memories from previous sessions are available via memorix_search.${contextSummary}`,
         },
       };
+    }
 
     case 'pre_compact':
       // Context is about to be compressed — save what we can

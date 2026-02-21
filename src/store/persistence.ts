@@ -32,6 +32,10 @@ function sanitizeProjectId(projectId: string): string {
  * @param projectId - Git-based project identifier (e.g. "user/repo")
  */
 export async function getProjectDataDir(projectId: string, baseDir?: string): Promise<string> {
+  // Reject sentinel IDs to prevent garbage directories
+  if (projectId === '__invalid__') {
+    throw new Error('Cannot create data directory for invalid project');
+  }
   const base = baseDir ?? DEFAULT_DATA_DIR;
   const dirName = sanitizeProjectId(projectId);
   const dataDir = path.join(base, dirName);

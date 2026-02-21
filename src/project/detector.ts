@@ -10,6 +10,7 @@
 
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { ProjectInfo } from '../types.js';
 
@@ -29,12 +30,66 @@ export function detectProject(cwd?: string): ProjectInfo {
     return { id, name, gitRemote, rootPath };
   }
 
+  // Validate the root before creating a fallback project.
+  // This prevents home dirs, system dirs, and IDE config dirs from
+  // becoming phantom projects with garbage data directories.
+  if (!isValidProjectRoot(rootPath)) {
+    // Use a generic sentinel ID — data will NOT be persisted
+    console.error(`[memorix] Skipped invalid project root: ${rootPath}`);
+    return { id: '__invalid__', name: 'unknown', rootPath };
+  }
+
   // Fallback: use "local/<dirname>" to distinguish non-git projects
-  // This avoids creating garbage directories named after IDEs or system paths
   const name = path.basename(rootPath);
   const id = `local/${name}`;
   console.error(`[memorix] Warning: no git remote found at ${rootPath}, using fallback projectId: ${id}`);
   return { id, name, rootPath };
+}
+
+/**
+ * Check whether a directory looks like a real project root.
+ * Returns false for home directories, OS system directories,
+ * drive roots, and IDE/tool configuration directories.
+ */
+function isValidProjectRoot(dirPath: string): boolean {
+  const resolved = path.resolve(dirPath);
+  const home = path.resolve(os.homedir());
+
+  // Reject the home directory itself (e.g., C:\Users\Lenovo, /home/user)
+  if (resolved === home) return false;
+
+  // Reject drive roots (C:\, D:\, /)
+  if (resolved === path.parse(resolved).root) return false;
+
+  // Reject immediate children of home that are IDE/tool config dirs
+  const basename = path.basename(resolved).toLowerCase();
+  const knownNonProjectDirs = new Set([
+    // IDE / editor config dirs
+    '.vscode', '.cursor', '.windsurf', '.kiro', '.codex',
+    '.gemini', '.claude', '.github', '.git',
+    // OS / system dirs
+    'desktop', 'documents', 'downloads', 'pictures', 'videos', 'music',
+    'appdata', 'application data', 'library',
+    // Package manager / tool dirs
+    'node_modules', '.npm', '.yarn', '.pnpm-store',
+    '.config', '.local', '.cache', '.ssh', '.memorix',
+  ]);
+  if (knownNonProjectDirs.has(basename)) {
+    const parent = path.resolve(path.dirname(resolved));
+    // Only block if it's directly under home or a drive root
+    if (parent === home || parent === path.parse(parent).root) {
+      return false;
+    }
+  }
+
+  // Must have at least ONE project indicator file
+  const projectIndicators = [
+    'package.json', 'Cargo.toml', 'go.mod', 'pyproject.toml',
+    'setup.py', 'pom.xml', 'build.gradle', 'Makefile',
+    'CMakeLists.txt', 'composer.json', 'Gemfile',
+    '.git', 'README.md', 'README',
+  ];
+  return projectIndicators.some(f => existsSync(path.join(resolved, f)));
 }
 
 /**

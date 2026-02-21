@@ -31,3 +31,14 @@ Thumbs.db
 # Test scripts
 test-*.mjs
 run-*.mjs
+e2e-*.mts
+e2e-*.mjs
+
+# Reference / cloned repos
+temple/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
