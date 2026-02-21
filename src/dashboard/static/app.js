@@ -241,9 +241,15 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 // API Client
 // ============================================================
 
+let selectedProject = ''; // empty = current project (default)
+
 async function api(endpoint) {
   try {
-    const res = await fetch(`/api/${endpoint}`);
+    const sep = endpoint.includes('?') ? '&' : '?';
+    const url = selectedProject
+      ? `/api/${endpoint}${sep}project=${encodeURIComponent(selectedProject)}`
+      : `/api/${endpoint}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err) {
@@ -251,6 +257,49 @@ async function api(endpoint) {
     return null;
   }
 }
+
+// ============================================================
+// Project Switcher
+// ============================================================
+
+async function initProjectSwitcher() {
+  const select = document.getElementById('project-select');
+  if (!select) return;
+
+  // Fetch project list
+  try {
+    const res = await fetch('/api/projects');
+    const projects = await res.json();
+    if (!Array.isArray(projects) || projects.length === 0) {
+      select.innerHTML = '<option value="">No projects</option>';
+      return;
+    }
+
+    select.innerHTML = '';
+    for (const p of projects) {
+      const opt = document.createElement('option');
+      opt.value = p.isCurrent ? '' : p.id;
+      opt.textContent = p.name + (p.isCurrent ? ' ●' : '');
+      opt.title = p.id;
+      if (p.isCurrent) opt.selected = true;
+      select.appendChild(opt);
+    }
+  } catch {
+    select.innerHTML = '<option value="">Error</option>';
+  }
+
+  // Switch handler
+  select.addEventListener('change', () => {
+    selectedProject = select.value;
+    // Clear all cached pages and reload current
+    Object.keys(loaded).forEach(k => delete loaded[k]);
+    loadPage(currentPage);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initProjectSwitcher();
+});
 
 // ============================================================
 // Page Loaders

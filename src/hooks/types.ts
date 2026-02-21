@@ -16,7 +16,7 @@ export type HookEvent =
   | 'post_response';
 
 /** Supported agent identifiers */
-export type AgentName = 'claude' | 'copilot' | 'windsurf' | 'cursor' | 'kiro' | 'codex';
+export type AgentName = 'claude' | 'copilot' | 'windsurf' | 'cursor' | 'kiro' | 'codex' | 'antigravity';
 
 /** Normalized hook input — agent-agnostic */
 export interface NormalizedHookInput {
@@ -82,7 +82,8 @@ export type PatternType =
   | 'learning'
   | 'implementation'
   | 'configuration'
-  | 'gotcha';
+  | 'gotcha'
+  | 'deployment';
 
 export interface DetectedPattern {
   type: PatternType;

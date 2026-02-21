@@ -23,3 +23,11 @@ Thumbs.db
 .agent/
 .gemini/
 .shared/
+.codex/
+.cursor/
+.kiro/
+.memorix/
+
+# Test scripts
+test-*.mjs
+run-*.mjs

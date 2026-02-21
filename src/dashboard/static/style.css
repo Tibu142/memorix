@@ -1046,3 +1046,50 @@ body {
     padding: 16px;
   }
 }
+
+/* ============================================================
+ * Project Switcher
+ * ============================================================ */
+
+.project-switcher {
+  padding: 4px 8px 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.project-switcher select {
+  width: 44px;
+  height: 28px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 0 2px;
+  text-align: center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  transition: var(--transition-fast);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-switcher select:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.project-switcher select:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+}
+
+.project-switcher select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 4px 8px;
+}

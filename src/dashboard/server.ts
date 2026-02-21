@@ -13,7 +13,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { exec } from 'node:child_process';
 
-import { loadGraphJsonl, loadObservationsJson, loadIdCounter } from '../store/persistence.js';
+import { loadGraphJsonl, loadObservationsJson, loadIdCounter, getBaseDataDir } from '../store/persistence.js';
 
 // MIME types for static file serving
 const MIME_TYPES: Record<string, string> = {
@@ -60,35 +60,78 @@ async function handleApi(
     dataDir: string,
     projectId: string,
     projectName: string,
+    baseDir: string,
 ) {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
     const apiPath = url.pathname.replace('/api', '');
 
+    // Support ?project=xxx to switch view to another project
+    const requestedProject = url.searchParams.get('project');
+    let effectiveDataDir = dataDir;
+    let effectiveProjectId = projectId;
+    let effectiveProjectName = projectName;
+    if (requestedProject && requestedProject !== projectId) {
+        const sanitized = requestedProject.replace(/\//g, '--').replace(/[<>:"|?*\\]/g, '_');
+        const candidateDir = path.join(baseDir, sanitized);
+        try {
+            await fs.access(candidateDir);
+            effectiveDataDir = candidateDir;
+            effectiveProjectId = requestedProject;
+            effectiveProjectName = requestedProject.split('/').pop() || requestedProject;
+        } catch {
+            // requested project dir doesn't exist, fall through to default
+        }
+    }
+
     try {
         switch (apiPath) {
+            case '/projects': {
+                // List all project directories
+                try {
+                    const entries = await fs.readdir(baseDir, { withFileTypes: true });
+                    const projects = entries
+                        .filter((e: { isDirectory: () => boolean; name: string }) =>
+                            e.isDirectory() && e.name.includes('--'))  // Only git-based projects (owner--repo)
+                        .map((e: { name: string }) => {
+                            const dirName = e.name;
+                            const id = dirName.replace(/--/g, '/');
+                            return {
+                                id,
+                                name: id.split('/').pop() || id,
+                                dirName,
+                                isCurrent: id === projectId,
+                            };
+                        });
+                    sendJson(res, projects);
+                } catch {
+                    sendJson(res, []);
+                }
+                break;
+            }
+
             case '/project': {
-                sendJson(res, { id: projectId, name: projectName });
+                sendJson(res, { id: effectiveProjectId, name: effectiveProjectName });
                 break;
             }
 
             case '/graph': {
-                const graph = await loadGraphJsonl(dataDir);
+                const graph = await loadGraphJsonl(effectiveDataDir);
                 sendJson(res, graph);
                 break;
             }
 
             case '/observations': {
-                const allObs = await loadObservationsJson(dataDir);
-                const observations = filterByProject(allObs as Array<{ projectId?: string }>, projectId);
+                const allObs = await loadObservationsJson(effectiveDataDir);
+                const observations = filterByProject(allObs as Array<{ projectId?: string }>, effectiveProjectId);
                 sendJson(res, observations);
                 break;
             }
 
             case '/stats': {
-                const graph = await loadGraphJsonl(dataDir);
-                const allObs = await loadObservationsJson(dataDir);
-                const observations = filterByProject(allObs as Array<{ projectId?: string; type?: string; id?: number; createdAt?: string; title?: string; entityName?: string }>, projectId);
-                const nextId = await loadIdCounter(dataDir);
+                const graph = await loadGraphJsonl(effectiveDataDir);
+                const allObs = await loadObservationsJson(effectiveDataDir);
+                const observations = filterByProject(allObs as Array<{ projectId?: string; type?: string; id?: number; createdAt?: string; title?: string; entityName?: string }>, effectiveProjectId);
+                const nextId = await loadIdCounter(effectiveDataDir);
 
                 // Type counts
                 const typeCounts: Record<string, number> = {};
@@ -114,7 +157,7 @@ async function handleApi(
             }
 
             case '/retention': {
-                const allObs = await loadObservationsJson(dataDir) as Array<{
+                const allObs = await loadObservationsJson(effectiveDataDir) as Array<{
                     id?: number;
                     title?: string;
                     type?: string;
@@ -125,7 +168,7 @@ async function handleApi(
                     entityName?: string;
                     projectId?: string;
                 }>;
-                const observations = filterByProject(allObs, projectId);
+                const observations = filterByProject(allObs, effectiveProjectId);
 
                 const now = Date.now();
                 const scored = observations.map((obs) => {
@@ -240,12 +283,14 @@ export async function startDashboard(
     autoOpen = true,
 ): Promise<void> {
     const resolvedStaticDir = staticDir;
+    // Derive baseDir from dataDir (parent directory of project-specific dir)
+    const baseDir = getBaseDataDir();
 
     const server = createServer(async (req, res) => {
         const url = req.url || '/';
 
         if (url.startsWith('/api/')) {
-            await handleApi(req, res, dataDir, projectId, projectName);
+            await handleApi(req, res, dataDir, projectId, projectName, baseDir);
         } else {
             await serveStatic(req, res, resolvedStaticDir);
         }

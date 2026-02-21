@@ -197,7 +197,7 @@ export async function detectInstalledAgents(): Promise<AgentName[]> {
     agents.push('cursor');
   } catch { /* not installed */ }
 
-  // Check for VS Code (always assume available if Claude is not)
+  // Check for VS Code Copilot (if Claude Code is not detected)
   if (!agents.includes('claude')) {
     const vscodeDir = path.join(home, '.vscode');
     try {
@@ -211,6 +211,20 @@ export async function detectInstalledAgents(): Promise<AgentName[]> {
   try {
     await fs.access(kiroConfig);
     agents.push('kiro');
+  } catch { /* not installed */ }
+
+  // Check for Codex
+  const codexDir = path.join(home, '.codex');
+  try {
+    await fs.access(codexDir);
+    agents.push('codex');
+  } catch { /* not installed */ }
+
+  // Check for Antigravity (Google Gemini CLI)
+  const antigravityDir = path.join(home, '.gemini', 'antigravity');
+  try {
+    await fs.access(antigravityDir);
+    agents.push('antigravity');
   } catch { /* not installed */ }
 
   return agents;
@@ -315,21 +329,44 @@ async function installAgentRules(agent: AgentName, projectRoot: string): Promise
       break;
     case 'claude':
     case 'copilot':
-      // Claude Code / Copilot: append to CLAUDE.md or create .github/copilot-instructions.md
       rulesPath = path.join(projectRoot, '.github', 'copilot-instructions.md');
       break;
+    case 'codex':
+      rulesPath = path.join(projectRoot, 'AGENTS.md');
+      break;
+    case 'kiro':
+      rulesPath = path.join(projectRoot, '.kiro', 'rules', 'memorix.md');
+      break;
     default:
-      return; // unsupported agent
+      // Antigravity and others
+      rulesPath = path.join(projectRoot, '.agent', 'rules', 'memorix.md');
+      break;
   }
 
   try {
     await fs.mkdir(path.dirname(rulesPath), { recursive: true });
-    // Only write if not already present
-    try {
-      await fs.access(rulesPath);
-      // File exists — don't overwrite user customizations
-    } catch {
-      await fs.writeFile(rulesPath, rulesContent, 'utf-8');
+
+    if (agent === 'codex') {
+      // For Codex AGENTS.md, append rather than overwrite
+      try {
+        const existing = await fs.readFile(rulesPath, 'utf-8');
+        if (existing.includes('Memorix')) {
+          return; // Already contains memorix rules
+        }
+        // Append to existing AGENTS.md
+        await fs.writeFile(rulesPath, existing + '\n\n' + rulesContent, 'utf-8');
+      } catch {
+        // File doesn't exist, create it
+        await fs.writeFile(rulesPath, rulesContent, 'utf-8');
+      }
+    } else {
+      // Only write if not already present
+      try {
+        await fs.access(rulesPath);
+        // File exists — don't overwrite user customizations
+      } catch {
+        await fs.writeFile(rulesPath, rulesContent, 'utf-8');
+      }
     }
   } catch { /* silent */ }
 }
@@ -346,22 +383,50 @@ You have access to Memorix memory tools. Follow these rules to maintain persiste
 
 At the **beginning of every conversation**, before responding to the user:
 
-1. Call \`memorix_search\` with query related to the user's first message or the current project
-2. If results are found, use them to understand the current project state, recent decisions, and pending tasks
-3. Reference relevant memories naturally in your response
+1. Call \`memorix_search\` with a query related to the user's first message or the current project
+2. If results are found, use \`memorix_detail\` to fetch the most relevant ones
+3. Reference relevant memories naturally in your response — the user should feel you "remember" them
 
 This ensures you already know the project context without the user re-explaining.
 
 ## During Session — Capture Important Context
 
-Proactively call \`memorix_store\` when any of the following happen:
+**Proactively** call \`memorix_store\` whenever any of the following happen:
 
-- **Architecture decision**: You or the user decide on a technology, pattern, or approach
-- **Bug fix**: A bug is identified and resolved — store the root cause and fix
-- **Gotcha/pitfall**: Something unexpected or tricky is discovered
-- **Configuration change**: Environment, port, path, or tooling changes
+### Architecture & Decisions
+- Technology choice, framework selection, or design pattern adopted
+- Trade-off discussion with a clear conclusion
+- API design, database schema, or project structure decisions
 
-Use appropriate types: \`decision\`, \`problem-solution\`, \`gotcha\`, \`what-changed\`, \`discovery\`.
+### Bug Fixes & Problem Solving
+- A bug is identified and resolved — store root cause + fix
+- Workaround applied for a known issue
+- Performance issue diagnosed and optimized
+
+### Gotchas & Pitfalls
+- Something unexpected or tricky is discovered
+- A common mistake is identified and corrected
+- Platform-specific behavior that caused issues
+
+### Configuration & Environment
+- Environment variables, port numbers, paths changed
+- Docker, nginx, Caddy, or reverse proxy config modified
+- Package dependencies added, removed, or version-pinned
+
+### Deployment & Operations
+- Server deployment steps (Docker, VPS, cloud)
+- DNS, SSL/TLS certificate, domain configuration
+- CI/CD pipeline setup or changes
+- Database migration or data transfer procedures
+- Server topology (ports, services, reverse proxy chain)
+- SSH keys, access credentials setup (store pattern, NOT secrets)
+
+### Project Milestones
+- Feature completed or shipped
+- Version released or published to npm/PyPI/etc.
+- Repository made public, README updated, PR submitted
+
+Use appropriate types: \`decision\`, \`problem-solution\`, \`gotcha\`, \`what-changed\`, \`discovery\`, \`how-it-works\`.
 
 ## Session End — Store Summary
 
@@ -369,18 +434,21 @@ When the conversation is ending or the user says goodbye:
 
 1. Call \`memorix_store\` with type \`session-request\` to record:
    - What was accomplished in this session
-   - Current project state
+   - Current project state and any blockers
    - Pending tasks or next steps
-   - Any unresolved issues
+   - Key files modified
 
-This creates a "handoff note" for the next session.
+This creates a "handoff note" for the next session (or for another AI agent).
 
 ## Guidelines
 
-- **Don't store trivial information** (greetings, acknowledgments, simple file reads)
+- **Don't store trivial information** (greetings, acknowledgments, simple file reads, ls/dir output)
 - **Do store anything you'd want to know if you lost all context**
-- **Use concise titles** and structured facts
+- **Do store anything a different AI agent would need to continue this work**
+- **Use concise titles** (~5-10 words) and structured facts
 - **Include file paths** in filesModified when relevant
+- **Include related concepts** for better searchability
+- **Prefer storing too much over too little** — the retention system will auto-decay stale memories
 `;
 }
 
@@ -424,7 +492,7 @@ export async function getHookStatus(
   projectRoot: string,
 ): Promise<Array<{ agent: AgentName; installed: boolean; configPath: string }>> {
   const results: Array<{ agent: AgentName; installed: boolean; configPath: string }> = [];
-  const agents: AgentName[] = ['claude', 'copilot', 'windsurf', 'cursor', 'kiro', 'codex'];
+  const agents: AgentName[] = ['claude', 'copilot', 'windsurf', 'cursor', 'kiro', 'codex', 'antigravity'];
 
   for (const agent of agents) {
     const projectPath = getProjectConfigPath(agent, projectRoot);

@@ -12,20 +12,159 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-/** Default base data directory — single global store shared across all agents */
+/** Default base data directory */
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.memorix', 'data');
 
 /**
- * Get the global data directory for Memorix storage.
- * All agents share the same directory — projectId is stored as metadata only.
- * This follows the mcp-memory-service pattern for reliable cross-agent sharing.
+ * Sanitize a projectId for use as a directory name.
+ * Replaces `/` with `--`, removes other unsafe chars.
+ */
+function sanitizeProjectId(projectId: string): string {
+  return projectId.replace(/\//g, '--').replace(/[<>:"|?*\\]/g, '_');
+}
+
+/**
+ * Get the project-specific data directory for Memorix storage.
+ * Each project gets its own subdirectory under ~/.memorix/data/
  *
- * @param projectId - kept for API compat, ignored for directory resolution
+ * Example: projectId "AVIDS2/memorix" → ~/.memorix/data/AVIDS2--memorix/
+ *
+ * @param projectId - Git-based project identifier (e.g. "user/repo")
  */
 export async function getProjectDataDir(projectId: string, baseDir?: string): Promise<string> {
-  const dataDir = baseDir ?? DEFAULT_DATA_DIR;
+  const base = baseDir ?? DEFAULT_DATA_DIR;
+  const dirName = sanitizeProjectId(projectId);
+  const dataDir = path.join(base, dirName);
   await fs.mkdir(dataDir, { recursive: true });
   return dataDir;
+}
+
+/**
+ * Get the base data directory (parent of all project dirs).
+ */
+export function getBaseDataDir(baseDir?: string): string {
+  return baseDir ?? DEFAULT_DATA_DIR;
+}
+
+/**
+ * List all project data directories.
+ * Used for cross-project (global) search.
+ */
+export async function listProjectDirs(baseDir?: string): Promise<string[]> {
+  const base = baseDir ?? DEFAULT_DATA_DIR;
+  try {
+    const entries = await fs.readdir(base, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isDirectory())
+      .map((e) => path.join(base, e.name));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Migrate legacy global data to project-specific directory.
+ * If observations.json exists directly in the base data dir (old format),
+ * move it into the correct project subdirectory.
+ */
+export async function migrateGlobalData(projectId: string, baseDir?: string): Promise<boolean> {
+  const base = baseDir ?? DEFAULT_DATA_DIR;
+  const globalObsPath = path.join(base, 'observations.json');
+  const migratedObsPath = path.join(base, 'observations.json.migrated');
+
+  // Check if global data exists (either live or already-migrated backup)
+  let sourceObsPath: string | null = null;
+  try {
+    await fs.access(globalObsPath);
+    sourceObsPath = globalObsPath;
+  } catch {
+    // Check for .migrated backup that wasn't fully merged
+    try {
+      await fs.access(migratedObsPath);
+      sourceObsPath = migratedObsPath;
+    } catch {
+      return false; // No global data to migrate
+    }
+  }
+
+  // Read the source (global) observations
+  let globalObs: unknown[] = [];
+  try {
+    const data = await fs.readFile(sourceObsPath, 'utf-8');
+    globalObs = JSON.parse(data);
+    if (!Array.isArray(globalObs) || globalObs.length === 0) return false;
+  } catch {
+    return false;
+  }
+
+  // Read existing project observations (may have been partially written)
+  const projectDir = await getProjectDataDir(projectId, baseDir);
+  const projectObsPath = path.join(projectDir, 'observations.json');
+  let projectObs: unknown[] = [];
+  try {
+    const data = await fs.readFile(projectObsPath, 'utf-8');
+    projectObs = JSON.parse(data);
+    if (!Array.isArray(projectObs)) projectObs = [];
+  } catch { /* no existing data */ }
+
+  // If project already has >= global data, skip (already migrated properly)
+  if (projectObs.length >= globalObs.length) {
+    return false;
+  }
+
+  // Merge: global data + project data, deduplicate by ID
+  const existingIds = new Set(projectObs.map((o: any) => o.id));
+  const merged = [...projectObs];
+  for (const obs of globalObs) {
+    if (!existingIds.has((obs as any).id)) {
+      merged.push(obs);
+    }
+  }
+
+  // Sort by ID
+  merged.sort((a: any, b: any) => (a.id ?? 0) - (b.id ?? 0));
+
+  // Normalize projectId for all migrated records to the current project
+  for (const obs of merged) {
+    (obs as any).projectId = projectId;
+  }
+
+  // Write merged observations
+  await fs.writeFile(projectObsPath, JSON.stringify(merged, null, 2), 'utf-8');
+
+  // Copy graph and counter if they exist
+  for (const file of ['graph.jsonl', 'counter.json']) {
+    const src = path.join(base, file);
+    const srcMigrated = path.join(base, file + '.migrated');
+    const dst = path.join(projectDir, file);
+    // Try live file first, then .migrated backup
+    for (const source of [src, srcMigrated]) {
+      try {
+        await fs.access(source);
+        await fs.copyFile(source, dst);
+        break;
+      } catch { /* try next */ }
+    }
+  }
+
+  // Find max ID for counter
+  const maxId = merged.reduce((max: number, o: any) => Math.max(max, o.id ?? 0), 0);
+  await fs.writeFile(
+    path.join(projectDir, 'counter.json'),
+    JSON.stringify({ nextId: maxId + 1 }),
+    'utf-8',
+  );
+
+  // Rename source files to .migrated (if not already)
+  for (const file of ['observations.json', 'graph.jsonl', 'counter.json']) {
+    const src = path.join(base, file);
+    try {
+      await fs.access(src);
+      await fs.rename(src, src + '.migrated');
+    } catch { /* already migrated or doesn't exist */ }
+  }
+
+  return true;
 }
 
 /**
@@ -109,8 +248,10 @@ export async function loadGraphJsonl(
         }
         return graph;
       },
-      { entities: [] as Array<{ name: string; entityType: string; observations: string[] }>,
-        relations: [] as Array<{ from: string; to: string; relationType: string }> },
+      {
+        entities: [] as Array<{ name: string; entityType: string; observations: string[] }>,
+        relations: [] as Array<{ from: string; to: string; relationType: string }>
+      },
     );
   } catch (error) {
     if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {

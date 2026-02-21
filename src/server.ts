@@ -54,6 +54,16 @@ export async function createMemorixServer(cwd?: string): Promise<{
 }> {
   // Detect current project
   const project = detectProject(cwd);
+
+  // Migrate legacy global data to project-specific directory (one-time, silent)
+  try {
+    const { migrateGlobalData } = await import('./store/persistence.js');
+    const migrated = await migrateGlobalData(project.id);
+    if (migrated) {
+      console.error(`[memorix] Migrated legacy data to project directory: ${project.id}`);
+    }
+  } catch { /* migration is optional */ }
+
   const projectDir = await getProjectDataDir(project.id);
 
   // Initialize components
@@ -70,20 +80,21 @@ export async function createMemorixServer(cwd?: string): Promise<{
   console.error(`[memorix] Project: ${project.id} (${project.name})`);
   console.error(`[memorix] Data dir: ${projectDir}`);
 
-  // Auto-install hooks on first run (silent, non-blocking)
+  // Auto-install hooks for newly detected agents (incremental, silent, non-blocking)
   try {
     const { getHookStatus, installHooks, detectInstalledAgents } = await import('./hooks/installers/index.js');
     const workDir = cwd ?? process.cwd();
     const statuses = await getHookStatus(workDir);
-    const anyInstalled = statuses.some((s) => s.installed);
-    if (!anyInstalled) {
-      const agents = await detectInstalledAgents();
-      for (const agent of agents) {
-        try {
-          const config = await installHooks(agent, workDir);
-          console.error(`[memorix] Auto-installed hooks for ${agent} → ${config.configPath}`);
-        } catch { /* skip */ }
-      }
+    const installedAgents = new Set(statuses.filter((s) => s.installed).map((s) => s.agent));
+    const detectedAgents = await detectInstalledAgents();
+
+    // Install hooks for each detected agent that isn't already installed
+    for (const agent of detectedAgents) {
+      if (installedAgents.has(agent)) continue; // already installed
+      try {
+        const config = await installHooks(agent, workDir);
+        console.error(`[memorix] Auto-installed hooks for ${agent} → ${config.configPath}`);
+      } catch { /* skip */ }
     }
   } catch { /* hooks install is optional */ }
 
@@ -270,14 +281,19 @@ export async function createMemorixServer(cwd?: string): Promise<{
         limit: z.number().optional().describe('Max results (default: 20)'),
         type: z.enum(OBSERVATION_TYPES).optional().describe('Filter by observation type'),
         maxTokens: z.number().optional().describe('Token budget — trim results to fit (0 = unlimited)'),
+        scope: z.enum(['project', 'global']).optional().describe(
+          'Search scope: "project" (default) only searches current project, "global" searches all projects',
+        ),
       },
     },
-    async ({ query, limit, type, maxTokens }) => {
+    async ({ query, limit, type, maxTokens, scope }) => {
       const result = await compactSearch({
         query,
         limit,
         type: type as ObservationType | undefined,
         maxTokens,
+        // Default to current project scope; 'global' removes the project filter
+        projectId: scope === 'global' ? undefined : project.id,
       });
 
       // Append sync advisory on first search of the session
