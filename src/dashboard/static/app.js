@@ -720,13 +720,13 @@ function renderGraph(graph) {
     legend.className = 'graph-legend';
     legend.style.cssText = `
       position: absolute; top: 12px; right: 12px; z-index: 10;
-      background: var(--glass-bg, rgba(15,15,30,0.85));
+      background: var(--bg-card);
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+      border: 1px solid var(--border-medium);
       border-radius: 12px; padding: 12px 14px; min-width: 140px;
       font-family: 'Inter', sans-serif; font-size: 11px;
-      color: var(--text-secondary, #94a3b8);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      color: var(--text-secondary);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
       transition: opacity 0.3s;
     `;
 
@@ -736,7 +736,7 @@ function renderGraph(graph) {
 
     // Title
     const title = document.createElement('div');
-    title.style.cssText = 'font-weight: 600; font-size: 11px; margin-bottom: 8px; color: var(--text-primary, #e2e8f0); letter-spacing: 0.5px; text-transform: uppercase;';
+    title.style.cssText = 'font-weight: 600; font-size: 11px; margin-bottom: 8px; color: var(--text-primary); letter-spacing: 0.5px; text-transform: uppercase;';
     title.textContent = t('legend') || 'Legend';
     legend.appendChild(title);
 
@@ -764,7 +764,7 @@ function renderGraph(graph) {
 
         // Hover to highlight same-type nodes
         row.addEventListener('mouseenter', () => {
-          row.style.background = 'rgba(255,255,255,0.06)';
+          row.style.background = 'var(--bg-card-hover)';
           nodes.forEach(n => { n._dimmed = n.type !== type; });
           draw();
         });
@@ -779,7 +779,7 @@ function renderGraph(graph) {
 
     // Stats footer
     const stats = document.createElement('div');
-    stats.style.cssText = 'margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 10px; opacity: 0.5;';
+    stats.style.cssText = 'margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-subtle); font-size: 10px; opacity: 0.5;';
     stats.textContent = `${nodes.length} nodes · ${edges.length} edges`;
     legend.appendChild(stats);
 
