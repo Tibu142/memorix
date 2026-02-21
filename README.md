@@ -99,6 +99,22 @@ Then use `"command": "memorix"` instead of `"command": "npx"` in your config.
 - **Skills & Workflows** — Copy skill folders and workflow files across agents
 - **Apply with Safety** — Backup `.bak` → Atomic write → Auto-rollback on failure
 
+### 🔒 Project Isolation
+
+- **Per-Project Data** — Each project stores data in its own directory (`~/.memorix/data/<owner--repo>/`)
+- **Git-Based Detection** — Project identity derived from `git remote`, no manual config needed
+- **Scoped Search** — `memorix_search` defaults to current project; set `scope: "global"` to search all
+- **Auto Migration** — Legacy global data automatically migrates to project directories on first run
+- **Zero Cross-Contamination** — Architecture decisions from project A never leak into project B
+
+### 📊 Visual Dashboard
+
+- **Web Dashboard** — `memorix_dashboard` opens a beautiful web UI at `http://localhost:3210`
+- **Project Switcher** — Dropdown to view any project's data without switching IDEs
+- **Knowledge Graph** — Interactive visualization of entities and relations
+- **Retention Scores** — Exponential decay scoring with immunity status
+- **Light/Dark Theme** — Premium glassmorphism design, bilingual (EN/中文)
+
 ### 🪝 Auto-Memory Hooks
 
 - **Implicit Memory** — Auto-captures decisions, errors, gotchas from agent activity
