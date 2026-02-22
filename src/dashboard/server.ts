@@ -148,13 +148,12 @@ async function handleApi(
                 // Embedding provider status
                 let embeddingStatus = { enabled: false, provider: '', dimensions: 0 };
                 try {
-                    const { isEmbeddingEnabled } = await import('../store/orama-store.js');
                     const { getEmbeddingProvider } = await import('../embedding/provider.js');
-                    const provider = await getEmbeddingProvider();
+                    const embProvider = await getEmbeddingProvider();
                     embeddingStatus = {
-                        enabled: isEmbeddingEnabled(),
-                        provider: provider?.name || '',
-                        dimensions: provider?.dimensions || 0,
+                        enabled: embProvider !== null,
+                        provider: embProvider?.name || '',
+                        dimensions: embProvider?.dimensions || 0,
                     };
                 } catch { /* embedding module not available */ }
 

@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - **Dashboard checkbox checkmark not visible** — Added `position: relative/absolute` to `.obs-checkbox::after` so the ✓ renders correctly in batch select mode
 - **Embedding provider status flickers to "fulltext only"** — Replaced `initialized` boolean flag with a shared Promise lock; concurrent callers now wait for the same initialization instead of seeing `provider = null` mid-load
 - **`memorix_dashboard` MCP tool reliability** — Replaced fixed 800ms wait with TCP port polling (up to 5s) so the tool only returns after the HTTP server is actually listening
+- **Dashboard embedding status always shows "fulltext only"** — Fixed root cause: dashboard is an independent process, `isEmbeddingEnabled()` from orama-store always returns false there; now uses `provider !== null` directly
 
 ## [0.7.0] — 2026-02-21
 
