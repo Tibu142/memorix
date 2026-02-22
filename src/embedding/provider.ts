@@ -23,11 +23,11 @@ export interface EmbeddingProvider {
 
 /** Singleton provider instance (null = not available) */
 let provider: EmbeddingProvider | null = null;
-let initialized = false;
+let initPromise: Promise<EmbeddingProvider | null> | null = null;
 
 /**
  * Get the embedding provider. Returns null if none available.
- * Lazy-initialized on first call.
+ * Lazy-initialized on first call. Concurrent callers share the same Promise.
  *
  * Provider priority:
  *   1. fastembed (fastest, but requires native ONNX binding)
@@ -35,31 +35,34 @@ let initialized = false;
  *   3. null → fulltext search only (BM25)
  */
 export async function getEmbeddingProvider(): Promise<EmbeddingProvider | null> {
-  if (initialized) return provider;
-  initialized = true;
+  if (initPromise) return initPromise;
 
-  // Try fastembed first (local ONNX, fastest)
-  try {
-    const { FastEmbedProvider } = await import('./fastembed-provider.js');
-    provider = await FastEmbedProvider.create();
-    console.error(`[memorix] Embedding provider: ${provider!.name} (${provider!.dimensions}d)`);
-    return provider;
-  } catch {
-    // fastembed not installed — try next
-  }
+  initPromise = (async () => {
+    // Try fastembed first (local ONNX, fastest)
+    try {
+      const { FastEmbedProvider } = await import('./fastembed-provider.js');
+      provider = await FastEmbedProvider.create();
+      console.error(`[memorix] Embedding provider: ${provider!.name} (${provider!.dimensions}d)`);
+      return provider;
+    } catch {
+      // fastembed not installed — try next
+    }
 
-  // Try @huggingface/transformers (pure JS, no native deps)
-  try {
-    const { TransformersProvider } = await import('./transformers-provider.js');
-    provider = await TransformersProvider.create();
-    console.error(`[memorix] Embedding provider: ${provider!.name} (${provider!.dimensions}d)`);
-    return provider;
-  } catch {
-    // transformers not installed — degrade to fulltext
-  }
+    // Try @huggingface/transformers (pure JS, no native deps)
+    try {
+      const { TransformersProvider } = await import('./transformers-provider.js');
+      provider = await TransformersProvider.create();
+      console.error(`[memorix] Embedding provider: ${provider!.name} (${provider!.dimensions}d)`);
+      return provider;
+    } catch {
+      // transformers not installed — degrade to fulltext
+    }
 
-  console.error('[memorix] No embedding provider available — using fulltext search only');
-  return null;
+    console.error('[memorix] No embedding provider available — using fulltext search only');
+    return null;
+  })();
+
+  return initPromise;
 }
 
 /**
@@ -75,5 +78,5 @@ export async function isVectorSearchAvailable(): Promise<boolean> {
  */
 export function resetProvider(): void {
   provider = null;
-  initialized = false;
+  initPromise = null;
 }

@@ -1062,8 +1062,21 @@ export async function createMemorixServer(cwd?: string): Promise<{
           .then(() => { dashboardRunning = true; })
           .catch((err) => { console.error('[memorix] Dashboard error:', err); dashboardRunning = false; });
 
-        // Wait for the server to start, then open browser
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Poll until the server is actually listening (up to 5s)
+        const { createConnection } = await import('node:net');
+        await new Promise<void>(resolve => {
+          const deadline = Date.now() + 5000;
+          const tryConnect = () => {
+            const sock = createConnection(portNum, '127.0.0.1');
+            sock.once('connect', () => { sock.destroy(); resolve(); });
+            sock.once('error', () => {
+              sock.destroy();
+              if (Date.now() < deadline) setTimeout(tryConnect, 100);
+              else resolve(); // give up, return anyway
+            });
+          };
+          tryConnect();
+        });
         dashboardRunning = true;
 
         // Open browser from MCP side
