@@ -197,7 +197,19 @@ args = ["-y", "memorix@latest", "serve"]
 
 ### VS Code Copilot
 
-`.vscode/mcp.json` or VS Code `settings.json`:
+**Option A** — `.vscode/mcp.json` (workspace-scoped):
+```json
+{
+  "servers": {
+    "memorix": {
+      "command": "npx",
+      "args": ["-y", "memorix@latest", "serve"]
+    }
+  }
+}
+```
+
+**Option B** — VS Code `settings.json` (global):
 ```json
 {
   "mcp": {
