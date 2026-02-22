@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2] — 2026-02-22
+
+### Fixed
+- **`memorix_workspace_sync` rejects `kiro` as target** — Added `kiro` to `AGENT_TARGETS` enum (adapter was already implemented but missing from the tool's input schema)
+- **`memorix_rules_sync` missing `kiro` target** — Added `kiro` to `RULE_SOURCES` enum so Kiro steering rules can be generated as a sync target
+- **VS Code Copilot README config** — Separated `.vscode/mcp.json` (workspace) and `settings.json` (global) formats which have different JSON structures
+
 ## [0.7.1] — 2026-02-22
 
 ### Fixed
