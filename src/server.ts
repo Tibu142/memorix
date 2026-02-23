@@ -1018,14 +1018,16 @@ export async function createMemorixServer(cwd?: string): Promise<{
       const url = `http://localhost:${portNum}`;
 
       if (dashboardRunning) {
+        // Pass current project as URL parameter so dashboard shows the right project
+        const projectUrl = `${url}?project=${encodeURIComponent(project.id)}`;
         const { exec } = await import('node:child_process');
         const cmd =
-          process.platform === 'win32' ? `start "" "${url}"` :
-            process.platform === 'darwin' ? `open "${url}"` :
-              `xdg-open "${url}"`;
+          process.platform === 'win32' ? `start "" "${projectUrl}"` :
+            process.platform === 'darwin' ? `open "${projectUrl}"` :
+              `xdg-open "${projectUrl}"`;
         exec(cmd, () => { });
         return {
-          content: [{ type: 'text' as const, text: `Dashboard is already running at ${url}. Opened in browser.` }],
+          content: [{ type: 'text' as const, text: `Dashboard is already running at ${url}. Opened in browser for project: ${project.name} (${project.id}).` }],
         };
       }
 

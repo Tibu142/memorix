@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.7] — 2026-02-24
+
+### Fixed
+- **Wrong project detection in Antigravity/global MCP configs** — Removed dangerous `scriptDir` fallback in `serve.ts` that caused the MCP server to detect the memorix development repo (or other wrong projects) instead of the user's actual project. When `process.cwd()` was not a git repo, the old code fell back to the memorix script's own directory, which could resolve to a completely unrelated project. Now relies solely on `detectProject()` which has proper fallback logic.
+- **Dashboard always showing wrong project** — When re-opening the dashboard (already running on port 3210), it now passes the current project as a `?project=` URL parameter. The frontend reads this parameter and auto-selects the correct project in the switcher, so opening dashboard from different IDEs/projects shows the right data.
+
 ## [0.7.6] — 2026-02-24
 
 ### Added

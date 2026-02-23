@@ -304,6 +304,10 @@ async function initProjectSwitcher() {
   const select = document.getElementById('project-select');
   if (!select) return;
 
+  // Check URL parameter for project override (e.g., ?project=AVIDS2/my_status)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlProject = urlParams.get('project');
+
   // Fetch project list
   try {
     const res = await fetch('/api/projects');
@@ -314,13 +318,30 @@ async function initProjectSwitcher() {
     }
 
     select.innerHTML = '';
+    let urlProjectFound = false;
     for (const p of projects) {
       const opt = document.createElement('option');
-      opt.value = p.isCurrent ? '' : p.id;
-      opt.textContent = p.name + (p.isCurrent ? ' ●' : '');
-      opt.title = p.id;
-      if (p.isCurrent) opt.selected = true;
+      // If URL specifies a project, use that as the selected one
+      if (urlProject && p.id === urlProject) {
+        opt.value = p.id;
+        opt.textContent = p.name + ' ●';
+        opt.title = p.id;
+        opt.selected = true;
+        selectedProject = p.id;
+        urlProjectFound = true;
+      } else {
+        opt.value = p.isCurrent && !urlProject ? '' : p.id;
+        opt.textContent = p.name + (p.isCurrent && !urlProject ? ' ●' : '');
+        opt.title = p.id;
+        if (p.isCurrent && !urlProject) opt.selected = true;
+      }
       select.appendChild(opt);
+    }
+
+    // If URL project was set, clear caches and reload
+    if (urlProjectFound) {
+      Object.keys(loaded).forEach(k => delete loaded[k]);
+      loadPage(currentPage);
     }
   } catch {
     select.innerHTML = '<option value="">Error</option>';
