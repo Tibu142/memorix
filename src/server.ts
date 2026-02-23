@@ -203,7 +203,8 @@ export async function createMemorixServer(cwd?: string): Promise<{
         'Use type to classify: gotcha (🔴 critical pitfall), decision (🟤 architecture choice), ' +
         'problem-solution (🟡 bug fix), how-it-works (🔵 explanation), what-changed (🟢 change), ' +
         'discovery (🟣 insight), why-it-exists (🟠 rationale), trade-off (⚖️ compromise), ' +
-        'session-request (🎯 original goal).',
+        'session-request (🎯 original goal). ' +
+        'Stored memories persist across sessions and are shared with other IDEs (Cursor, Windsurf, Claude Code, Codex, Copilot, Kiro, Antigravity) via the same local data directory.',
       inputSchema: {
         entityName: z.string().describe('The entity this observation belongs to (e.g., "auth-module", "port-config")'),
         type: z.enum(OBSERVATION_TYPES).describe('Observation type for classification'),
@@ -275,7 +276,8 @@ export async function createMemorixServer(cwd?: string): Promise<{
       description:
         'Search project memory. Returns a compact index (~50-100 tokens/result). ' +
         'Use memorix_detail to fetch full content for specific IDs. ' +
-        'Use memorix_timeline to see chronological context.',
+        'Use memorix_timeline to see chronological context. ' +
+        'Searches across all observations stored from any IDE session — enabling cross-session and cross-agent context retrieval.',
       inputSchema: {
         query: z.string().describe('Search query (natural language or keywords)'),
         limit: z.number().optional().describe('Max results (default: 20)'),
@@ -743,8 +745,8 @@ export async function createMemorixServer(cwd?: string): Promise<{
     {
       title: 'Workspace Sync',
       description:
-        'Migrate your entire workspace environment between AI agents. ' +
-        'Syncs MCP server configs, workflows, rules, and skills. ' +
+        'Migrate your entire workspace environment between AI coding agents (Cursor, Windsurf, Claude Code, Codex, Copilot, Kiro, Antigravity). ' +
+        'Syncs MCP server configs, workflows, rules, and skills across IDEs. ' +
         'Action "scan": detect all workspace configs. ' +
         'Action "migrate": generate configs for target agent (preview only). ' +
         'Action "apply": migrate AND write configs to disk with backup/rollback.',
@@ -873,7 +875,7 @@ export async function createMemorixServer(cwd?: string): Promise<{
         'Action "list": show all available skills from all agents. ' +
         'Action "generate": auto-generate project-specific skills from observation patterns (gotchas, decisions, how-it-works). ' +
         'Action "inject": return a specific skill\'s full content for direct use. ' +
-        'Generated skills follow the SKILL.md standard and can be synced across agents.',
+        'Generated skills follow the SKILL.md standard and can be synced across Cursor, Windsurf, Claude Code, Codex, Copilot, Kiro, and Antigravity.',
       inputSchema: {
         action: z.enum(['list', 'generate', 'inject']).describe('Action: "list" to discover skills, "generate" to create from memory, "inject" to get skill content'),
         name: z.string().optional().describe('Skill name (required for "inject")'),

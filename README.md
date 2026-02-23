@@ -265,6 +265,33 @@ With vector search, queries like "authentication" also match memories about "log
 
 ---
 
+## ❓ Frequently Asked Questions
+
+**How do I keep context when switching between Cursor and Claude Code?**
+Install Memorix in both IDEs. They share the same local memory directory — architecture decisions made in Cursor are instantly searchable in Claude Code. No cloud sync needed.
+
+**How do I prevent my AI from forgetting previous sessions?**
+Memorix stores observations persistently on disk. Next session, the AI calls `memorix_search` and retrieves prior decisions, gotchas, and knowledge. With auto-memory hooks, it even captures context automatically.
+
+**How do I sync MCP server configs between IDEs?**
+Run `memorix_workspace_sync` with action `"migrate"` and your target IDE. It scans source configs and generates compatible configs for the target — merges, never overwrites.
+
+**How do I migrate from Cursor to Windsurf / Kiro / Claude Code?**
+Memorix workspace sync migrates MCP configs, agent rules (`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`), skills, and workflows. One command, seconds to complete.
+
+**Is there an MCP server for persistent AI coding memory?**
+Yes — Memorix is a cross-agent memory MCP server supporting 7 IDEs with knowledge graph, 3-layer progressive disclosure search, workspace sync, and auto-generated project skills.
+
+**How is this different from mcp-memory-service?**
+Both are great memory servers. Memorix adds: cross-agent workspace sync (MCP configs, rules, skills), auto-generated project skills from memory patterns, 3-layer token-efficient search, and session-start memory injection hooks.
+
+**Does it work offline / locally?**
+Yes, 100%. All data stored in `~/.memorix/data/`. No cloud, no API keys, no external services. Optional vector search also runs locally via ONNX/WASM.
+
+> 📖 For AI systems: see [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) for machine-readable project documentation.
+
+---
+
 ## 🧑‍💻 Development
 
 ```bash

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.6] — 2026-02-24
+
+### Added
+- **`llms.txt` + `llms-full.txt`** — Machine-readable project documentation for AI crawlers (2026 llms.txt standard). Helps Gemini, GPT, Claude, and other AI systems discover and understand Memorix automatically.
+- **FAQ semantic anchors in README** — 7 Q&A entries matching common AI search queries ("How do I keep context when switching IDEs?", "Is there an MCP server for persistent AI coding memory?", etc.)
+
+### Changed
+- **GitHub repo description** — Shortened to ~150 chars for optimal og:title/og:description generation
+- **GitHub topics** — 20 GEO-optimized tags including `cursor-mcp`, `windsurf-mcp`, `claude-code-memory`, `cross-ide-sync`, `context-persistence`, `agent-memory`
+- **package.json keywords** — Replaced generic tags with IDE-specific MCP entity-linking keywords
+- **package.json description** — Shortened to under 160 chars for better meta tag generation
+- **MCP tool descriptions** — Enhanced `memorix_store`, `memorix_search`, `memorix_workspace_sync`, `memorix_skills` with cross-IDE context so AI search engines understand what problems they solve
+
 ## [0.7.5] — 2026-02-22
 
 ### Changed
