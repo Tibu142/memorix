@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] — 2026-02-24
+
+### Added
+- **Session Lifecycle Management** — 3 new MCP tools for cross-session context continuity:
+  - `memorix_session_start` — Start a coding session, auto-inject context from previous sessions (summaries + key observations). Previous active sessions are auto-closed.
+  - `memorix_session_end` — End a session with structured summary (Goal/Discoveries/Accomplished/Files format). Summary is injected into the next session.
+  - `memorix_session_context` — Manually retrieve session history and context (useful after compaction recovery).
+- **Topic Key Upsert** — `memorix_store` now accepts an optional `topicKey` parameter. When an observation with the same `topicKey + projectId` already exists, it is **updated in-place** instead of creating a duplicate. `revisionCount` increments on each upsert. Prevents data bloat for evolving decisions, architecture docs, etc.
+- **`memorix_suggest_topic_key` tool** — Suggests stable topic keys from type + title using family heuristics (`architecture/*`, `bug/*`, `decision/*`, `config/*`, `discovery/*`, `pattern/*`). Supports CJK characters.
+- **Session persistence** — `sessions.json` with atomic writes and file locking for cross-process safety.
+- **Observation fields** — `topicKey`, `revisionCount`, `updatedAt`, `sessionId` added to `Observation` interface.
+- **30 new tests** — 16 session lifecycle tests + 14 topic key upsert tests (468 total).
+
+### Improved
+- **`storeObservation` API** — Now returns `{ observation, upserted }` instead of just `Observation`, enabling callers to distinguish new vs updated observations.
+
+### Inspired by
+- [Engram](https://github.com/alanbuscaglia/engram) — Session lifecycle design, topic_key upsert pattern, structured session summaries.
+
 ## [0.7.11] — 2026-02-24
 
 ### Added

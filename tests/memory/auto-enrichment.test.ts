@@ -29,7 +29,7 @@ beforeEach(async () => {
 
 describe('Auto-Enrichment on Store', () => {
   it('should auto-extract file paths from narrative into filesModified', async () => {
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'auth-module',
       type: 'what-changed',
       title: 'Updated authentication flow',
@@ -42,7 +42,7 @@ describe('Auto-Enrichment on Store', () => {
   });
 
   it('should not duplicate user-provided files', async () => {
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'auth-module',
       type: 'what-changed',
       title: 'Updated auth',
@@ -56,7 +56,7 @@ describe('Auto-Enrichment on Store', () => {
   });
 
   it('should auto-enrich concepts from CamelCase identifiers', async () => {
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'graph',
       type: 'how-it-works',
       title: 'Knowledge graph design',
@@ -69,7 +69,7 @@ describe('Auto-Enrichment on Store', () => {
   });
 
   it('should detect causal language', async () => {
-    const causalObs = await storeObservation({
+    const { observation: causalObs } = await storeObservation({
       entityName: 'decision',
       type: 'decision',
       title: 'Chose Express',
@@ -78,7 +78,7 @@ describe('Auto-Enrichment on Store', () => {
     });
     expect(causalObs.hasCausalLanguage).toBe(true);
 
-    const nonCausalObs = await storeObservation({
+    const { observation: nonCausalObs } = await storeObservation({
       entityName: 'change',
       type: 'what-changed',
       title: 'Updated config',
@@ -89,7 +89,7 @@ describe('Auto-Enrichment on Store', () => {
   });
 
   it('should preserve user-provided concepts alongside auto-enriched ones', async () => {
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'auth',
       type: 'decision',
       title: 'JWT auth',

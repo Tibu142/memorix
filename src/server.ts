@@ -226,16 +226,21 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
         facts: z.array(z.string()).optional().describe('Structured facts (e.g., "Default timeout: 60s")'),
         filesModified: z.array(z.string()).optional().describe('Files involved'),
         concepts: z.array(z.string()).optional().describe('Related concepts/keywords'),
+        topicKey: z.string().optional().describe(
+          'Optional topic identifier for upserts (e.g., "architecture/auth-model"). ' +
+          'If an observation with the same topicKey already exists in this project, it will be UPDATED instead of creating a new one. ' +
+          'Use memorix_suggest_topic_key to generate a stable key. Good for evolving decisions, architecture docs, etc.',
+        ),
       },
     },
-    async ({ entityName, type, title, narrative, facts, filesModified, concepts }) => {
+    async ({ entityName, type, title, narrative, facts, filesModified, concepts, topicKey }) => {
       // Ensure entity exists in knowledge graph
       await graphManager.createEntities([
         { name: entityName, entityType: 'auto', observations: [] },
       ]);
 
-      // Store the observation
-      const obs = await storeObservation({
+      // Store the observation (may upsert if topicKey matches existing)
+      const { observation: obs, upserted } = await storeObservation({
         entityName,
         type: type as ObservationType,
         title,
@@ -244,6 +249,7 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
         filesModified,
         concepts,
         projectId: project.id,
+        topicKey,
       });
 
       // Add a reference to the entity's observations
@@ -257,21 +263,60 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
 
       // Build enrichment summary
       const enrichmentParts: string[] = [];
-      const autoFiles = obs.filesModified.filter((f) => !(filesModified ?? []).includes(f));
-      const autoConcepts = obs.concepts.filter((c) => !(concepts ?? []).includes(c));
+      const autoFiles = obs.filesModified.filter((f: string) => !(filesModified ?? []).includes(f));
+      const autoConcepts = obs.concepts.filter((c: string) => !(concepts ?? []).includes(c));
       if (autoFiles.length > 0) enrichmentParts.push(`+${autoFiles.length} files extracted`);
       if (autoConcepts.length > 0) enrichmentParts.push(`+${autoConcepts.length} concepts enriched`);
       if (autoRelCount > 0) enrichmentParts.push(`+${autoRelCount} relations auto-created`);
       if (obs.hasCausalLanguage) enrichmentParts.push('causal language detected');
+      if (upserted) enrichmentParts.push(`topic upserted (rev ${obs.revisionCount ?? 1})`);
       const enrichment = enrichmentParts.length > 0 ? `\nAuto-enriched: ${enrichmentParts.join(', ')}` : '';
+
+      const action = upserted ? '🔄 Updated' : '✅ Stored';
 
       return {
         content: [
           {
             type: 'text' as const,
-            text: `✅ Stored observation #${obs.id} "${title}" (~${obs.tokens} tokens)\nEntity: ${entityName} | Type: ${type} | Project: ${project.id}${enrichment}`,
+            text: `${action} observation #${obs.id} "${title}" (~${obs.tokens} tokens)\nEntity: ${entityName} | Type: ${type} | Project: ${project.id}${obs.topicKey ? ` | Topic: ${obs.topicKey}` : ''}${enrichment}`,
           },
         ],
+      };
+    },
+  );
+
+  /**
+   * memorix_suggest_topic_key — Suggest a stable topic key for upserts
+   *
+   * Use before memorix_store when you want evolving topics to upsert
+   * into a single observation instead of creating duplicates.
+   */
+  server.registerTool(
+    'memorix_suggest_topic_key',
+    {
+      title: 'Suggest Topic Key',
+      description:
+        'Suggest a stable topic_key for memory upserts. Use this before memorix_store when you want evolving topics ' +
+        '(like architecture decisions, config docs) to update a single observation over time instead of creating duplicates. ' +
+        'Returns a key like "architecture/auth-model" or "bug/timeout-in-api-gateway".',
+      inputSchema: {
+        type: z.string().describe('Observation type (e.g., decision, architecture, bugfix, discovery)'),
+        title: z.string().describe('Observation title — used to generate the stable key'),
+      },
+    },
+    async ({ type: obsType, title }) => {
+      const { suggestTopicKey } = await import('./memory/observations.js');
+      const key = suggestTopicKey(obsType, title);
+
+      if (!key) {
+        return {
+          content: [{ type: 'text' as const, text: 'Could not suggest topic_key from the given input. Provide a more descriptive title.' }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: `Suggested topic_key: \`${key}\`\n\nUse this as the \`topicKey\` parameter in \`memorix_store\` to enable upsert behavior.` }],
       };
     },
   );
@@ -1024,6 +1069,138 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
 
       return {
         content: [{ type: 'text' as const, text: lines.join('\n') }],
+      };
+    },
+  );
+
+  // ============================================================
+  // Session Lifecycle Tools (inspired by Engram)
+  // ============================================================
+
+  /**
+   * memorix_session_start — Start a new coding session
+   *
+   * Creates a session record and returns context from previous sessions.
+   * This is the entry point for session-aware memory management.
+   */
+  server.registerTool(
+    'memorix_session_start',
+    {
+      title: 'Start Session',
+      description:
+        'Start a new coding session. Returns context from previous sessions so you can resume work seamlessly. ' +
+        'Call this at the beginning of a session to track activity and get injected context. ' +
+        'Any previous active session for this project will be auto-closed.',
+      inputSchema: {
+        sessionId: z.string().optional().describe('Custom session ID (auto-generated if omitted)'),
+        agent: z.string().optional().describe('Agent/IDE name (e.g., "cursor", "windsurf", "claude-code")'),
+      },
+    },
+    async ({ sessionId, agent }) => {
+      const { startSession } = await import('./memory/session.js');
+      const result = await startSession(projectDir, project.id, { sessionId, agent });
+
+      const lines = [
+        `✅ Session started: ${result.session.id}`,
+        `Project: ${project.name} (${project.id})`,
+        result.session.agent ? `Agent: ${result.session.agent}` : '',
+        '',
+      ];
+
+      if (result.previousContext) {
+        lines.push('---', '📋 **Context from previous sessions:**', '', result.previousContext);
+      } else {
+        lines.push('No previous session context found. This appears to be a fresh project.');
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: lines.filter(Boolean).join('\n') }],
+      };
+    },
+  );
+
+  /**
+   * memorix_session_end — End the current coding session
+   *
+   * Marks the session as completed with a structured summary.
+   */
+  server.registerTool(
+    'memorix_session_end',
+    {
+      title: 'End Session',
+      description:
+        'End a coding session with a structured summary. This summary will be injected into the next session ' +
+        'so the next agent can resume work seamlessly.\n\n' +
+        'Recommended summary format:\n' +
+        '## Goal\n[What we were working on]\n\n' +
+        '## Discoveries\n- [Technical findings, gotchas, learnings]\n\n' +
+        '## Accomplished\n- ✅ [Completed tasks]\n- 🔲 [Pending for next session]\n\n' +
+        '## Relevant Files\n- path/to/file — [what changed]',
+      inputSchema: {
+        sessionId: z.string().describe('Session ID to close (from memorix_session_start)'),
+        summary: z.string().optional().describe('Structured session summary (Goal/Discoveries/Accomplished/Files format)'),
+      },
+    },
+    async ({ sessionId, summary }) => {
+      const { endSession } = await import('./memory/session.js');
+      const session = await endSession(projectDir, sessionId, summary);
+
+      if (!session) {
+        return {
+          content: [{ type: 'text' as const, text: `Session "${sessionId}" not found.` }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `✅ Session "${sessionId}" completed.\nDuration: ${session.startedAt} → ${session.endedAt}\n${summary ? 'Summary saved for next session context injection.' : 'No summary provided — consider adding one for better cross-session context.'}`,
+        }],
+      };
+    },
+  );
+
+  /**
+   * memorix_session_context — Get context from previous sessions
+   *
+   * Use this for compaction recovery or to manually retrieve session history.
+   */
+  server.registerTool(
+    'memorix_session_context',
+    {
+      title: 'Session Context',
+      description:
+        'Get context from previous coding sessions. Use this after compaction to recover lost context, ' +
+        'or to manually review session history. Returns previous session summaries and key observations.',
+      inputSchema: {
+        limit: z.number().optional().describe('Number of recent sessions to include (default: 3)'),
+      },
+    },
+    async ({ limit }) => {
+      const { getSessionContext, listSessions } = await import('./memory/session.js');
+      const context = await getSessionContext(projectDir, project.id, limit ?? 3);
+      const sessions = await listSessions(projectDir, project.id);
+
+      const activeSessions = sessions.filter(s => s.status === 'active');
+      const completedSessions = sessions.filter(s => s.status === 'completed');
+
+      const header = [
+        `## Session Stats`,
+        `- Active: ${activeSessions.length}`,
+        `- Completed: ${completedSessions.length}`,
+        `- Total: ${sessions.length}`,
+        '',
+      ];
+
+      if (!context) {
+        return {
+          content: [{ type: 'text' as const, text: header.join('\n') + '\nNo previous session context available.' }],
+        };
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: header.join('\n') + context }],
       };
     },
   );

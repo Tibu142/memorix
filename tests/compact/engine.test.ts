@@ -70,7 +70,7 @@ describe('Compact Engine', () => {
 
   describe('compactDetail (Layer 3)', () => {
     it('should return full observation details', async () => {
-      const obs = await storeObservation({
+      const { observation: obs } = await storeObservation({
         entityName: 'timeout-config',
         type: 'gotcha',
         title: 'Hook timeout too short',
@@ -81,7 +81,7 @@ describe('Compact Engine', () => {
         projectId: 'test/project',
       });
 
-      const result = await compactDetail([obs.id], 'test/project');
+      const result = await compactDetail([obs.id]);
       expect(result.documents).toHaveLength(1);
       expect(result.formatted).toContain('Hook timeout too short');
       expect(result.formatted).toContain('60s');
@@ -89,7 +89,7 @@ describe('Compact Engine', () => {
     });
 
     it('should return empty for non-existent IDs', async () => {
-      const result = await compactDetail([99999], 'test/project');
+      const result = await compactDetail([99999]);
       expect(result.documents).toHaveLength(0);
     });
   });

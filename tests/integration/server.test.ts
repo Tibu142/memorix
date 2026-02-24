@@ -38,7 +38,7 @@ beforeEach(async () => {
 describe('End-to-End: Store → Search → Detail', () => {
   it('should store an observation and find it via search', async () => {
     // Store
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'auth-module',
       type: 'decision',
       title: 'Use JWT for API authentication',
@@ -60,7 +60,7 @@ describe('End-to-End: Store → Search → Detail', () => {
     expect(searchResult.entries[0].title).toBe('Use JWT for API authentication');
 
     // Detail (Layer 3)
-    const detailResult = await compactDetail([obs.id], PROJECT_ID);
+    const detailResult = await compactDetail([obs.id]);
     expect(detailResult.documents).toHaveLength(1);
     expect(detailResult.formatted).toContain('JWT');
     expect(detailResult.formatted).toContain('jwt.ts');
@@ -134,7 +134,7 @@ describe('End-to-End: Store → Search → Detail', () => {
     ]);
 
     // Store observation referencing entity
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'api-gateway',
       type: 'trade-off',
       title: 'Chose Express over Fastify for gateway',
@@ -194,7 +194,7 @@ describe('End-to-End: Store → Search → Detail', () => {
     await new Promise((r) => setTimeout(r, 50));
 
     // Detail should still work (access tracking is best-effort)
-    const detail = await compactDetail([1], PROJECT_ID);
+    const detail = await compactDetail([1]);
     expect(detail.documents).toHaveLength(1);
     expect(detail.documents[0].title).toBe('Access tracking test observation');
   });

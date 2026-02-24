@@ -9,6 +9,7 @@
  */
 
 import type { Observation, ObservationType, MemorixDocument } from '../types.js';
+import { TOPIC_KEY_FAMILIES } from '../types.js';
 import { insertObservation, generateEmbedding, isEmbeddingEnabled } from '../store/orama-store.js';
 import { saveObservationsJson, loadObservationsJson, saveIdCounter, loadIdCounter } from '../store/persistence.js';
 import { withFileLock } from '../store/file-lock.js';
@@ -49,9 +50,22 @@ export async function storeObservation(input: {
   filesModified?: string[];
   concepts?: string[];
   projectId: string;
-}): Promise<Observation> {
-  const id = nextId++;
+  topicKey?: string;
+  sessionId?: string;
+}): Promise<{ observation: Observation; upserted: boolean }> {
   const now = new Date().toISOString();
+
+  // Topic key upsert: check if an observation with the same topicKey+projectId exists
+  if (input.topicKey) {
+    const existing = observations.find(
+      o => o.topicKey === input.topicKey && o.projectId === input.projectId,
+    );
+    if (existing) {
+      return { observation: await upsertObservation(existing, input, now), upserted: true };
+    }
+  }
+
+  const id = nextId++;
 
   // Auto-extract entities from narrative (inspired by MemCP RegexEntityExtractor)
   const contentForExtraction = [input.title, input.narrative, ...(input.facts ?? [])].join(' ');
@@ -92,6 +106,9 @@ export async function storeObservation(input: {
     createdAt: now,
     projectId: input.projectId,
     hasCausalLanguage: extracted.hasCausalLanguage,
+    topicKey: input.topicKey,
+    revisionCount: 1,
+    sessionId: input.sessionId,
   };
 
   observations.push(observation);
@@ -146,7 +163,100 @@ export async function storeObservation(input: {
     });
   }
 
-  return observation;
+  return { observation, upserted: false };
+}
+
+/**
+ * Update an existing observation via topic key upsert.
+ * Replaces content but preserves the original ID and createdAt.
+ */
+async function upsertObservation(
+  existing: Observation,
+  input: {
+    entityName: string;
+    type: ObservationType;
+    title: string;
+    narrative: string;
+    facts?: string[];
+    filesModified?: string[];
+    concepts?: string[];
+    projectId: string;
+    topicKey?: string;
+    sessionId?: string;
+  },
+  now: string,
+): Promise<Observation> {
+  // Auto-extract and enrich (same as storeObservation)
+  const contentForExtraction = [input.title, input.narrative, ...(input.facts ?? [])].join(' ');
+  const extracted = extractEntities(contentForExtraction);
+  const enrichedConcepts = enrichConcepts(input.concepts ?? [], extracted);
+  const userFiles = new Set((input.filesModified ?? []).map((f) => f.toLowerCase()));
+  const enrichedFiles = [...(input.filesModified ?? [])];
+  for (const f of extracted.files) {
+    if (!userFiles.has(f.toLowerCase())) enrichedFiles.push(f);
+  }
+  const fullText = [input.title, input.narrative, ...(input.facts ?? []), ...enrichedFiles, ...enrichedConcepts].join(' ');
+  const tokens = countTextTokens(fullText);
+
+  // Update in-place
+  existing.entityName = input.entityName;
+  existing.type = input.type;
+  existing.title = input.title;
+  existing.narrative = input.narrative;
+  existing.facts = input.facts ?? [];
+  existing.filesModified = enrichedFiles;
+  existing.concepts = enrichedConcepts;
+  existing.tokens = tokens;
+  existing.updatedAt = now;
+  existing.hasCausalLanguage = extracted.hasCausalLanguage;
+  existing.revisionCount = (existing.revisionCount ?? 1) + 1;
+  if (input.sessionId) existing.sessionId = input.sessionId;
+
+  // Re-index in Orama
+  const searchableText = [input.title, input.narrative, ...(input.facts ?? [])].join(' ');
+  const embedding = await generateEmbedding(searchableText);
+
+  const doc: MemorixDocument = {
+    id: `obs-${existing.id}`,
+    observationId: existing.id,
+    entityName: existing.entityName,
+    type: existing.type,
+    title: existing.title,
+    narrative: existing.narrative,
+    facts: existing.facts.join('\n'),
+    filesModified: enrichedFiles.join('\n'),
+    concepts: enrichedConcepts.map(c => c.replace(/-/g, ' ')).join(', '),
+    tokens,
+    createdAt: existing.createdAt,
+    projectId: existing.projectId,
+    accessCount: 0,
+    lastAccessedAt: '',
+    ...(embedding ? { embedding } : {}),
+  };
+
+  // Remove old doc and insert updated one
+  try {
+    const { removeObservation } = await import('../store/orama-store.js');
+    await removeObservation(`obs-${existing.id}`);
+  } catch { /* may not exist in index */ }
+  await insertObservation(doc);
+
+  // Persist
+  if (projectDir) {
+    await withFileLock(projectDir, async () => {
+      const diskObs = await loadObservationsJson(projectDir!) as Observation[];
+      const idx = diskObs.findIndex(o => o.id === existing.id);
+      if (idx >= 0) {
+        diskObs[idx] = existing;
+      } else {
+        diskObs.push(existing);
+      }
+      observations = diskObs;
+      await saveObservationsJson(projectDir!, observations);
+    });
+  }
+
+  return existing;
 }
 
 /**
@@ -168,6 +278,34 @@ export function getProjectObservations(projectId: string): Observation[] {
  */
 export function getObservationCount(): number {
   return observations.length;
+}
+
+/**
+ * Suggest a stable topic key from type + title.
+ * Uses family heuristics (architecture/*, bug/*, decision/*, etc.)
+ * Inspired by Engram's mem_suggest_topic_key.
+ */
+export function suggestTopicKey(type: string, title: string): string {
+  // Determine family from type
+  let family = 'general';
+  const typeLower = type.toLowerCase();
+  for (const [fam, keywords] of Object.entries(TOPIC_KEY_FAMILIES)) {
+    if (keywords.some(k => typeLower.includes(k))) {
+      family = fam;
+      break;
+    }
+  }
+
+  // Normalize title to slug
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff\s-]/g, '') // keep letters, digits, CJK, spaces, hyphens
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 60);
+
+  if (!slug) return '';
+  return `${family}/${slug}`;
 }
 
 /**

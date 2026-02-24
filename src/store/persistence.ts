@@ -346,3 +346,30 @@ export async function loadIdCounter(projectDir: string): Promise<number> {
     return 1;
   }
 }
+
+/**
+ * Save sessions data as JSON.
+ */
+export async function saveSessionsJson(
+  projectDir: string,
+  sessions: unknown[],
+): Promise<void> {
+  const filePath = path.join(projectDir, 'sessions.json');
+  await atomicWriteFile(filePath, JSON.stringify(sessions, null, 2));
+}
+
+/**
+ * Load sessions data from JSON.
+ */
+export async function loadSessionsJson(projectDir: string): Promise<unknown[]> {
+  const filePath = path.join(projectDir, 'sessions.json');
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}

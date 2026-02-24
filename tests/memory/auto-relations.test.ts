@@ -43,7 +43,7 @@ describe('Auto-Relations', () => {
     ]);
 
     // Store observation that mentions "JsonWebToken" (CamelCase → extracted as identifier)
-    const obs = await storeObservation({
+    const { observation: obs } = await storeObservation({
       entityName: 'auth-module',
       type: 'how-it-works',
       title: 'Auth uses JsonWebToken for token generation',

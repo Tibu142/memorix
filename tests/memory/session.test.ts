@@ -1,0 +1,207 @@
+/**
+ * Session Lifecycle Tests
+ *
+ * Tests session start/end, context injection, and cross-session awareness.
+ * Inspired by Engram's session management pattern.
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../../src/embedding/provider.js', () => ({
+  getEmbeddingProvider: async () => null,
+  isVectorSearchAvailable: async () => false,
+  resetProvider: () => {},
+}));
+
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { startSession, endSession, getSessionContext, listSessions, getActiveSession } from '../../src/memory/session.js';
+import { storeObservation, initObservations } from '../../src/memory/observations.js';
+import { resetDb } from '../../src/store/orama-store.js';
+
+let testDir: string;
+const PROJECT_ID = 'test/session-lifecycle';
+
+beforeEach(async () => {
+  testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'memorix-session-'));
+  await resetDb();
+  await initObservations(testDir);
+});
+
+describe('Session Lifecycle', () => {
+  describe('startSession', () => {
+    it('should create a new session with auto-generated ID', async () => {
+      const result = await startSession(testDir, PROJECT_ID);
+
+      expect(result.session.id).toMatch(/^sess-/);
+      expect(result.session.projectId).toBe(PROJECT_ID);
+      expect(result.session.status).toBe('active');
+      expect(result.session.startedAt).toBeTruthy();
+    });
+
+    it('should use custom session ID when provided', async () => {
+      const result = await startSession(testDir, PROJECT_ID, { sessionId: 'custom-123' });
+
+      expect(result.session.id).toBe('custom-123');
+    });
+
+    it('should record agent name', async () => {
+      const result = await startSession(testDir, PROJECT_ID, { agent: 'windsurf' });
+
+      expect(result.session.agent).toBe('windsurf');
+    });
+
+    it('should auto-close previous active sessions', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 'first' });
+      await startSession(testDir, PROJECT_ID, { sessionId: 'second' });
+
+      const sessions = await listSessions(testDir, PROJECT_ID);
+      const first = sessions.find(s => s.id === 'first');
+      const second = sessions.find(s => s.id === 'second');
+
+      expect(first?.status).toBe('completed');
+      expect(first?.endedAt).toBeTruthy();
+      expect(second?.status).toBe('active');
+    });
+
+    it('should return empty context for fresh project', async () => {
+      const result = await startSession(testDir, PROJECT_ID);
+
+      expect(result.previousContext).toBe('');
+    });
+
+    it('should persist session to disk', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 'persist-test' });
+
+      const sessions = await listSessions(testDir, PROJECT_ID);
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].id).toBe('persist-test');
+    });
+  });
+
+  describe('endSession', () => {
+    it('should mark session as completed', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 'end-test' });
+      const ended = await endSession(testDir, 'end-test', '## Goal\nTest session end');
+
+      expect(ended).not.toBeNull();
+      expect(ended!.status).toBe('completed');
+      expect(ended!.endedAt).toBeTruthy();
+      expect(ended!.summary).toBe('## Goal\nTest session end');
+    });
+
+    it('should return null for non-existent session', async () => {
+      const result = await endSession(testDir, 'nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should work without summary', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 'no-summary' });
+      const ended = await endSession(testDir, 'no-summary');
+
+      expect(ended).not.toBeNull();
+      expect(ended!.status).toBe('completed');
+      expect(ended!.summary).toBeUndefined();
+    });
+  });
+
+  describe('getSessionContext', () => {
+    it('should return previous session summary in context', async () => {
+      // Create and end a session with summary
+      await startSession(testDir, PROJECT_ID, { sessionId: 'ctx-test', agent: 'cursor' });
+      await endSession(testDir, 'ctx-test', '## Goal\nImplement auth module\n\n## Accomplished\n- ✅ JWT middleware');
+
+      // Get context for new session
+      const context = await getSessionContext(testDir, PROJECT_ID);
+
+      expect(context).toContain('Previous Session');
+      expect(context).toContain('Implement auth module');
+      expect(context).toContain('JWT middleware');
+    });
+
+    it('should include key observations in context', async () => {
+      // Store some priority observations
+      await storeObservation({
+        entityName: 'auth',
+        type: 'gotcha',
+        title: 'JWT tokens expire silently',
+        narrative: 'Tokens expire without notification',
+        facts: ['Expiry: 24h'],
+        projectId: PROJECT_ID,
+      });
+
+      await storeObservation({
+        entityName: 'deploy',
+        type: 'decision',
+        title: 'Use Docker for deployment',
+        narrative: 'Chose Docker over bare metal',
+        projectId: PROJECT_ID,
+      });
+
+      const context = await getSessionContext(testDir, PROJECT_ID);
+
+      expect(context).toContain('Key Memories');
+      expect(context).toContain('JWT tokens expire silently');
+      expect(context).toContain('Use Docker for deployment');
+    });
+
+    it('should show session history for multiple sessions', async () => {
+      // Create 3 sessions
+      await startSession(testDir, PROJECT_ID, { sessionId: 'hist-1' });
+      await endSession(testDir, 'hist-1', '## Goal\nFirst session');
+
+      await startSession(testDir, PROJECT_ID, { sessionId: 'hist-2' });
+      await endSession(testDir, 'hist-2', '## Goal\nSecond session');
+
+      await startSession(testDir, PROJECT_ID, { sessionId: 'hist-3' });
+      await endSession(testDir, 'hist-3', '## Goal\nThird session');
+
+      const context = await getSessionContext(testDir, PROJECT_ID, 3);
+
+      expect(context).toContain('Session History');
+    });
+
+    it('should return empty string for project with no sessions or observations', async () => {
+      const context = await getSessionContext(testDir, 'empty-project');
+
+      expect(context).toBe('');
+    });
+  });
+
+  describe('listSessions', () => {
+    it('should list all sessions for a project', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 's1' });
+      await startSession(testDir, PROJECT_ID, { sessionId: 's2' });
+      await startSession(testDir, 'other-project', { sessionId: 's3' });
+
+      const projectSessions = await listSessions(testDir, PROJECT_ID);
+      const allSessions = await listSessions(testDir);
+
+      expect(projectSessions).toHaveLength(2);
+      expect(allSessions).toHaveLength(3);
+    });
+  });
+
+  describe('getActiveSession', () => {
+    it('should return the active session', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 'active-test' });
+
+      const active = await getActiveSession(testDir, PROJECT_ID);
+
+      expect(active).not.toBeNull();
+      expect(active!.id).toBe('active-test');
+      expect(active!.status).toBe('active');
+    });
+
+    it('should return null when no active session', async () => {
+      await startSession(testDir, PROJECT_ID, { sessionId: 'ended' });
+      await endSession(testDir, 'ended');
+
+      const active = await getActiveSession(testDir, PROJECT_ID);
+
+      expect(active).toBeNull();
+    });
+  });
+});

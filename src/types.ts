@@ -88,9 +88,32 @@ export interface Observation {
   concepts: string[];
   tokens: number;
   createdAt: string;
+  updatedAt?: string;
   projectId: string;
   /** Whether the observation contains causal language (because, due to, etc.) */
   hasCausalLanguage?: boolean;
+  /** Optional topic key for upsert — same project+topicKey updates existing observation */
+  topicKey?: string;
+  /** How many times this observation was revised via topic key upsert (starts at 1) */
+  revisionCount?: number;
+  /** Session ID this observation belongs to */
+  sessionId?: string;
+}
+
+// ============================================================
+// Session Lifecycle (inspired by Engram's session management)
+// ============================================================
+
+/** A coding session tracked by Memorix */
+export interface Session {
+  id: string;
+  projectId: string;
+  startedAt: string;
+  endedAt?: string;
+  summary?: string;
+  status: 'active' | 'completed';
+  /** Agent/IDE that started this session */
+  agent?: string;
 }
 
 // ============================================================
@@ -126,6 +149,16 @@ export interface SearchOptions {
   /** Token budget — trim results to fit within this many tokens (0 = unlimited) */
   maxTokens?: number;
 }
+
+/** Topic key family heuristics for suggesting stable topic keys */
+export const TOPIC_KEY_FAMILIES: Record<string, string[]> = {
+  'architecture': ['architecture', 'design', 'adr', 'structure', 'pattern'],
+  'bug': ['bugfix', 'fix', 'error', 'regression', 'crash', 'problem-solution'],
+  'decision': ['decision', 'trade-off', 'choice', 'strategy'],
+  'config': ['config', 'setup', 'env', 'environment', 'deployment'],
+  'discovery': ['discovery', 'learning', 'insight', 'gotcha'],
+  'pattern': ['pattern', 'convention', 'standard', 'best-practice'],
+};
 
 // ============================================================
 // Orama Document Schema
