@@ -13,7 +13,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { exec } from 'node:child_process';
 
-import { loadGraphJsonl, saveGraphJsonl, loadObservationsJson, saveObservationsJson, loadIdCounter, getBaseDataDir } from '../store/persistence.js';
+import { loadGraphJsonl, saveGraphJsonl, loadObservationsJson, saveObservationsJson, loadIdCounter, getBaseDataDir, loadSessionsJson } from '../store/persistence.js';
 import { withFileLock } from '../store/file-lock.js';
 
 // MIME types for static file serving
@@ -125,6 +125,13 @@ async function handleApi(
                 const allObs = await loadObservationsJson(effectiveDataDir);
                 const observations = filterByProject(allObs as Array<{ projectId?: string }>, effectiveProjectId);
                 sendJson(res, observations);
+                break;
+            }
+
+            case '/sessions': {
+                const allSessions = await loadSessionsJson(effectiveDataDir);
+                const sessions = filterByProject(allSessions as Array<{ projectId?: string }>, effectiveProjectId);
+                sendJson(res, sessions);
                 break;
             }
 

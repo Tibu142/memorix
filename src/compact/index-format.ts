@@ -32,10 +32,27 @@ export function formatIndexTable(entries: IndexEntry[], query?: string): string 
   lines.push('| ID | Time | T | Title | Tokens |');
   lines.push('|----|------|---|-------|--------|');
 
+  // Check if any entry has matchedFields (explainable recall)
+  const hasExplanation = entries.some(e => (e as unknown as Record<string, unknown>)['matchedFields']);
+
+  if (hasExplanation) {
+    lines.pop(); // remove previous header
+    lines.pop();
+    lines.push('| ID | Time | T | Title | Tokens | Matched |');
+    lines.push('|----|------|---|-------|--------|---------|');
+  }
+
   for (const entry of entries) {
-    lines.push(
-      `| #${entry.id} | ${entry.time} | ${entry.icon} | ${entry.title} | ~${entry.tokens} |`,
-    );
+    const matched = (entry as unknown as Record<string, unknown>)['matchedFields'] as string[] | undefined;
+    if (hasExplanation && matched) {
+      lines.push(
+        `| #${entry.id} | ${entry.time} | ${entry.icon} | ${entry.title} | ~${entry.tokens} | ${matched.join(', ')} |`,
+      );
+    } else {
+      lines.push(
+        `| #${entry.id} | ${entry.time} | ${entry.icon} | ${entry.title} | ~${entry.tokens} |`,
+      );
+    }
   }
 
   lines.push('');

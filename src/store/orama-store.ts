@@ -160,18 +160,66 @@ export async function searchObservations(options: SearchOptions): Promise<IndexE
 
   const results = await search(database, searchParams);
 
-  let entries = results.hits.map((hit) => {
+  // Build intermediate results with rawTime for temporal filtering
+  let intermediate = results.hits.map((hit) => {
     const doc = hit.document as unknown as MemorixDocument;
     const obsType = doc.type as ObservationType;
     return {
       id: doc.observationId,
       time: formatTime(doc.createdAt),
+      rawTime: doc.createdAt,
       type: obsType,
       icon: OBSERVATION_ICONS[obsType] ?? '❓',
       title: doc.title,
       tokens: doc.tokens,
     };
   });
+
+  // Temporal filtering: since/until date range
+  if (options.since) {
+    const sinceDate = new Date(options.since).getTime();
+    intermediate = intermediate.filter(e => new Date(e.rawTime).getTime() >= sinceDate);
+  }
+  if (options.until) {
+    const untilDate = new Date(options.until).getTime();
+    intermediate = intermediate.filter(e => new Date(e.rawTime).getTime() <= untilDate);
+  }
+
+  // Build IndexEntry with optional match explanation
+  let entries: IndexEntry[] = intermediate.map(({ rawTime: _, ...rest }) => rest);
+
+  // Explainable recall: annotate entries with match reasons
+  if (hasQuery && options.query) {
+    const queryLower = options.query.toLowerCase();
+    const queryTokens = queryLower.split(/\s+/).filter(t => t.length > 1);
+    for (const hit of results.hits) {
+      const doc = hit.document as unknown as MemorixDocument;
+      const entry = entries.find(e => e.id === doc.observationId);
+      if (!entry) continue;
+
+      const reasons: string[] = [];
+      for (const token of queryTokens) {
+        if (doc.title.toLowerCase().includes(token)) { reasons.push('title'); break; }
+      }
+      for (const token of queryTokens) {
+        if (doc.entityName.toLowerCase().includes(token)) { reasons.push('entity'); break; }
+      }
+      for (const token of queryTokens) {
+        if (doc.concepts.toLowerCase().includes(token)) { reasons.push('concept'); break; }
+      }
+      for (const token of queryTokens) {
+        if (doc.narrative.toLowerCase().includes(token)) { reasons.push('narrative'); break; }
+      }
+      for (const token of queryTokens) {
+        if (doc.facts.toLowerCase().includes(token)) { reasons.push('fact'); break; }
+      }
+      for (const token of queryTokens) {
+        if (doc.filesModified.toLowerCase().includes(token)) { reasons.push('file'); break; }
+      }
+      if (reasons.length === 0) reasons.push('fuzzy');
+      (entry as unknown as Record<string, unknown>)['matchedFields'] = reasons;
+    }
+  }
 
   // Apply token budget if specified (inspired by MemCP)
   if (options.maxTokens && options.maxTokens > 0) {

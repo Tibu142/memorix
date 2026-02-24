@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] — 2026-02-24
+
+### Added
+- **Memory Consolidation** (`memorix_consolidate`) — Find and merge similar observations to reduce memory bloat. Uses Jaccard text similarity to cluster observations by entity+type, then merges them preserving all facts, files, and concepts. Supports `preview` (dry run) and `execute` modes with configurable similarity threshold.
+- **Temporal Queries** — `memorix_search` now supports `since` and `until` parameters for date range filtering. Example: "What auth decisions did we make last week?"
+- **Explainable Recall** — Search results now include a `Matched` column showing which fields matched the query (title, entity, concept, narrative, fact, file, or fuzzy). Helps understand why each result was found.
+- **Export/Import** — Two new tools for team collaboration:
+  - `memorix_export` — Export project observations and sessions as JSON (importable) or Markdown (human-readable for PRs/docs)
+  - `memorix_import` — Import from JSON export, re-assigns IDs, skips duplicate topicKeys
+- **Dashboard Sessions Panel** — New "Sessions" tab in the web dashboard with timeline view, active/completed counts, agent info, and session summaries. Bilingual (EN/中文).
+- **Auto sessionId** — `memorix_store` now automatically associates the current active session's ID with stored observations.
+- **16 new tests** — 8 consolidation + 8 export/import (484 total).
+
+### Stats
+- **MCP Tools:** 20 → 24 (memorix_consolidate, memorix_export, memorix_import + dashboard sessions API)
+- **Tests:** 484/484 passing
+
 ## [0.8.0] — 2026-02-24
 
 ### Added

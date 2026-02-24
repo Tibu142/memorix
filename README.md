@@ -200,19 +200,23 @@ You update your architecture decision 3 times over a week:
 
 ## 🧠 What Memorix Can Do
 
-### Smart Memory (20 MCP Tools)
+### Smart Memory (24 MCP Tools)
 
 | What You Say | What Memorix Does |
 |-------------|-------------------|
-| "Remember this architecture decision" | `memorix_store` — Classifies as 🟤 decision, extracts entities, creates graph relations |
+| "Remember this architecture decision" | `memorix_store` — Classifies as 🟤 decision, extracts entities, creates graph relations, auto-associates session |
 | "What did we decide about auth?" | `memorix_search` → `memorix_detail` — 3-layer progressive disclosure, ~10x token savings |
+| "What auth decisions last week?" | `memorix_search` with `since`/`until` — Temporal queries with date range filtering |
 | "What happened around that bug fix?" | `memorix_timeline` — Shows chronological context before/after |
-| "Show me the knowledge graph" | `memorix_dashboard` — Opens interactive web UI with D3.js graph |
+| "Show me the knowledge graph" | `memorix_dashboard` — Opens interactive web UI with D3.js graph + sessions panel |
 | "Which memories are getting stale?" | `memorix_retention` — Exponential decay scores, identifies archive candidates |
 | "Start a new session" | `memorix_session_start` — Tracks session lifecycle, auto-injects previous session summaries + key memories |
 | "End this session" | `memorix_session_end` — Saves structured summary (Goal/Discoveries/Accomplished/Files) for next session |
 | "What did we do last session?" | `memorix_session_context` — Retrieves session history and key observations |
 | "Suggest a topic key for this" | `memorix_suggest_topic_key` — Generates stable keys for deduplication (e.g. `architecture/auth-model`) |
+| "Clean up duplicate memories" | `memorix_consolidate` — Find & merge similar observations by text similarity, preserving all facts |
+| "Export this project's memories" | `memorix_export` — JSON (importable) or Markdown (human-readable for PRs/docs) |
+| "Import memories from teammate" | `memorix_import` — Restore from JSON export, re-assigns IDs, deduplicates by topicKey |
 
 ### Cross-Agent Workspace Sync
 

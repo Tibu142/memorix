@@ -62,6 +62,18 @@ const i18n = {
     enabled: 'Enabled',
     typeDistribution: 'Type Distribution',
 
+    // Sessions
+    sessions: 'Sessions',
+    sessionsSubtitle: 'Session lifecycle timeline',
+    noSessions: 'No Sessions',
+    noSessionsDesc: 'Use memorix_session_start to begin tracking sessions',
+    sessionActive: 'Active',
+    sessionCompleted: 'Completed',
+    sessionAgent: 'Agent',
+    sessionStarted: 'Started',
+    sessionEnded: 'Ended',
+    sessionSummary: 'Summary',
+
     // Retention
     memoryRetention: 'Memory Retention',
     retentionSubtitle: 'Exponential decay scoring with immunity rules',
@@ -86,6 +98,7 @@ const i18n = {
     navGraph: 'Knowledge Graph',
     navObservations: 'Observations',
     navRetention: 'Retention',
+    navSessions: 'Sessions',
   },
   zh: {
     // Dashboard
@@ -141,6 +154,18 @@ const i18n = {
     enabled: '已启用',
     typeDistribution: '类型分布',
 
+    // Sessions
+    sessions: '会话',
+    sessionsSubtitle: '会话生命周期时间线',
+    noSessions: '暂无会话',
+    noSessionsDesc: '使用 memorix_session_start 开始跟踪会话',
+    sessionActive: '进行中',
+    sessionCompleted: '已完成',
+    sessionAgent: 'Agent',
+    sessionStarted: '开始时间',
+    sessionEnded: '结束时间',
+    sessionSummary: '摘要',
+
     // Retention
     memoryRetention: '记忆衰减',
     retentionSubtitle: '基于指数衰减的评分系统，支持免疫规则',
@@ -165,6 +190,7 @@ const i18n = {
     navGraph: '知识图谱',
     navObservations: '观察记录',
     navRetention: '记忆衰减',
+    navSessions: '会话',
   },
 };
 
@@ -183,7 +209,7 @@ function setLang(lang) {
   if (btn) btn.textContent = lang === 'en' ? '中' : 'EN';
 
   // Update nav tooltips
-  const tooltipMap = { dashboard: 'navDashboard', graph: 'navGraph', observations: 'navObservations', retention: 'navRetention' };
+  const tooltipMap = { dashboard: 'navDashboard', graph: 'navGraph', observations: 'navObservations', retention: 'navRetention', sessions: 'navSessions' };
   document.querySelectorAll('.nav-btn').forEach(b => {
     const page = b.dataset.page;
     if (page && tooltipMap[page]) b.title = t(tooltipMap[page]);
@@ -249,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Router & Navigation
 // ============================================================
 
-const pages = ['dashboard', 'graph', 'observations', 'retention'];
+const pages = ['dashboard', 'graph', 'observations', 'retention', 'sessions'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
@@ -374,6 +400,7 @@ async function loadPage(page) {
     case 'graph': await loadGraph(); break;
     case 'observations': await loadObservations(); break;
     case 'retention': await loadRetention(); break;
+    case 'sessions': await loadSessions(); break;
   }
   loaded[page] = true;
 }
@@ -1373,6 +1400,92 @@ function emptyState(icon, title, desc) {
       <div class="empty-state-desc">${desc}</div>
     </div>
   `;
+}
+
+// ============================================================
+// Sessions Page
+// ============================================================
+
+async function loadSessions() {
+  const container = document.getElementById('page-sessions');
+  if (!container) return;
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  const sessions = await api('sessions');
+  if (!sessions || sessions.length === 0) {
+    container.innerHTML = emptyState('📋', t('noSessions'), t('noSessionsDesc'));
+    return;
+  }
+
+  // Sort by startedAt descending (newest first)
+  sessions.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+  const activeCount = sessions.filter(s => s.status === 'active').length;
+  const completedCount = sessions.filter(s => s.status === 'completed').length;
+
+  let html = `
+    <div class="page-header">
+      <h1 class="page-title">${t('sessions')}</h1>
+      <p class="page-subtitle">${t('sessionsSubtitle')}</p>
+    </div>
+
+    <div class="retention-summary">
+      <div class="stat-card" data-accent="green">
+        <div class="stat-label">${t('sessionActive')}</div>
+        <div class="stat-value">${activeCount}</div>
+      </div>
+      <div class="stat-card" data-accent="blue">
+        <div class="stat-label">${t('sessionCompleted')}</div>
+        <div class="stat-value">${completedCount}</div>
+      </div>
+      <div class="stat-card" data-accent="purple">
+        <div class="stat-label">Total</div>
+        <div class="stat-value">${sessions.length}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Timeline</span></div>
+      <div class="panel-body" style="padding: 0;">
+        <table class="retention-table">
+          <thead>
+            <tr>
+              <th>${t('status')}</th>
+              <th>ID</th>
+              <th>${t('sessionAgent')}</th>
+              <th>${t('sessionStarted')}</th>
+              <th>${t('sessionEnded')}</th>
+              <th>${t('sessionSummary')}</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  for (const s of sessions) {
+    const statusBadge = s.status === 'active'
+      ? '<span class="badge" style="background:var(--color-green);color:#fff">🟢 ' + t('sessionActive') + '</span>'
+      : '<span class="badge" style="background:var(--color-blue);color:#fff">✅ ' + t('sessionCompleted') + '</span>';
+    const agent = s.agent ? escapeHtml(s.agent) : '—';
+    const started = formatTime(s.startedAt);
+    const ended = s.endedAt ? formatTime(s.endedAt) : '—';
+    const summary = s.summary
+      ? escapeHtml(s.summary.split('\n')[0].replace(/^#+\s*/, '').slice(0, 80)) + (s.summary.length > 80 ? '...' : '')
+      : '—';
+
+    html += `
+      <tr>
+        <td>${statusBadge}</td>
+        <td><code>${escapeHtml(s.id)}</code></td>
+        <td>${agent}</td>
+        <td>${started}</td>
+        <td>${ended}</td>
+        <td>${summary}</td>
+      </tr>
+    `;
+  }
+
+  html += '</tbody></table></div></div>';
+  container.innerHTML = html;
 }
 
 // ============================================================

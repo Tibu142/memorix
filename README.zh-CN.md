@@ -200,19 +200,23 @@ Antigravity 会将工作目录设为自身安装路径（如 `G:\Antigravity`）
 
 ## 🧠 Memorix 能做什么
 
-### 智能记忆（20 个 MCP 工具）
+### 智能记忆（24 个 MCP 工具）
 
 | 你说的 | Memorix 做的 |
 |--------|-------------|
-| "记住这个架构决策" | `memorix_store` — 分类为 🟤 决策，提取实体，创建图关系 |
+| "记住这个架构决策" | `memorix_store` — 分类为 🟤 决策，提取实体，创建图关系，自动关联会话 |
 | "我们之前关于认证决定了什么？" | `memorix_search` → `memorix_detail` — 3 层渐进式展示，节省约 10 倍 token |
+| "上周关于认证的决策？" | `memorix_search` + `since`/`until` — 时序查询，按日期范围过滤 |
 | "那个 bug 修复前后发生了什么？" | `memorix_timeline` — 按时间显示前后上下文 |
-| "显示知识图谱" | `memorix_dashboard` — 打开交互式 Web UI，含 D3.js 图谱 |
+| "显示知识图谱" | `memorix_dashboard` — 打开交互式 Web UI，含 D3.js 图谱 + 会话面板 |
 | "哪些记忆快过期了？" | `memorix_retention` — 指数衰减评分，识别归档候选 |
 | "开始新会话" | `memorix_session_start` — 跟踪会话生命周期，自动注入上次会话摘要 + 关键记忆 |
 | "结束这次会话" | `memorix_session_end` — 保存结构化摘要（目标/发现/完成/文件），供下次会话使用 |
 | "上次我们做了什么？" | `memorix_session_context` — 检索会话历史和关键观察记录 |
 | "给这个建议一个 topic key" | `memorix_suggest_topic_key` — 生成稳定的去重键（如 `architecture/auth-model`） |
+| "清理重复记忆" | `memorix_consolidate` — 按文本相似度查找并合并相似观察记录，保留所有事实 |
+| "导出这个项目的记忆" | `memorix_export` — JSON（可导入）或 Markdown（人类可读，适合 PR/文档） |
+| "导入队友的记忆" | `memorix_import` — 从 JSON 导出恢复，重新分配 ID，按 topicKey 去重 |
 
 ### 跨 Agent 工作区同步
 

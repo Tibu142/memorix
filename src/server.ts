@@ -239,6 +239,14 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
         { name: entityName, entityType: 'auto', observations: [] },
       ]);
 
+      // Auto-associate sessionId from active session
+      let sessionId: string | undefined;
+      try {
+        const { getActiveSession } = await import('./memory/session.js');
+        const active = await getActiveSession(projectDir, project.id);
+        if (active) sessionId = active.id;
+      } catch { /* session module not critical */ }
+
       // Store the observation (may upsert if topicKey matches existing)
       const { observation: obs, upserted } = await storeObservation({
         entityName,
@@ -250,6 +258,7 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
         concepts,
         projectId: project.id,
         topicKey,
+        sessionId,
       });
 
       // Add a reference to the entity's observations
@@ -344,14 +353,18 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
         scope: z.enum(['project', 'global']).optional().describe(
           'Search scope: "project" (default) only searches current project, "global" searches all projects',
         ),
+        since: z.string().optional().describe('Only return observations created after this date (ISO 8601 or natural like "2025-01-15")'),
+        until: z.string().optional().describe('Only return observations created before this date (ISO 8601 or natural like "2025-02-01")'),
       },
     },
-    async ({ query, limit, type, maxTokens, scope }) => {
+    async ({ query, limit, type, maxTokens, scope, since, until }) => {
       const result = await compactSearch({
         query,
         limit,
         type: type as ObservationType | undefined,
         maxTokens,
+        since,
+        until,
         // Default to current project scope; 'global' removes the project filter
         projectId: scope === 'global' ? undefined : project.id,
       });
@@ -1074,6 +1087,73 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
   );
 
   // ============================================================
+  // Memory Consolidation
+  // ============================================================
+
+  /**
+   * memorix_consolidate — Merge similar observations to reduce bloat
+   */
+  server.registerTool(
+    'memorix_consolidate',
+    {
+      title: 'Consolidate Memories',
+      description:
+        'Find and merge similar observations to reduce memory bloat. ' +
+        'Uses text similarity to cluster related observations by entity+type, then merges them into single consolidated records. ' +
+        'Use action="preview" to see candidates without changing data, action="execute" to merge.\n\n' +
+        'Example: 10 similar gotchas about Windows paths → 1 consolidated gotcha with all facts preserved.',
+      inputSchema: {
+        action: z.enum(['preview', 'execute']).describe('preview = dry run showing candidates, execute = actually merge'),
+        threshold: z.number().optional().describe('Similarity threshold 0.0-1.0 (default: 0.45). Lower = more aggressive merging'),
+      },
+    },
+    async ({ action, threshold }) => {
+      const { findConsolidationCandidates, executeConsolidation } = await import('./memory/consolidation.js');
+
+      if (action === 'preview') {
+        const clusters = await findConsolidationCandidates(projectDir, project.id, { threshold });
+
+        if (clusters.length === 0) {
+          return { content: [{ type: 'text' as const, text: '✅ No consolidation candidates found. Your memories are already clean!' }] };
+        }
+
+        const lines = [`## Consolidation Preview`, `Found **${clusters.length}** clusters to merge:`, ''];
+        for (let i = 0; i < clusters.length; i++) {
+          const c = clusters[i];
+          lines.push(`### Cluster ${i + 1} (${c.ids.length} observations, ~${(c.similarity * 100).toFixed(0)}% similar)`);
+          lines.push(`Entity: \`${c.entityName}\` | Type: ${c.type}`);
+          for (const title of c.titles) lines.push(`- ${title}`);
+          lines.push('');
+        }
+        const totalMergeable = clusters.reduce((sum, c) => sum + c.ids.length - 1, 0);
+        lines.push(`> Run with \`action: "execute"\` to merge. This will remove **${totalMergeable}** duplicate observations.`);
+
+        return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+      }
+
+      // Execute
+      const result = await executeConsolidation(projectDir, project.id, { threshold });
+
+      if (result.clustersFound === 0) {
+        return { content: [{ type: 'text' as const, text: '✅ No consolidation needed. Memories are already clean!' }] };
+      }
+
+      const lines = [
+        `## Consolidation Complete`,
+        `- Clusters merged: **${result.clustersFound}**`,
+        `- Observations removed: **${result.observationsMerged}**`,
+        `- Observations remaining: **${result.observationsAfter}**`,
+        '',
+      ];
+      for (const m of result.merges) {
+        lines.push(`- Merged [${m.mergedIds.join(', ')}] → "${m.resultTitle}" (${m.factCount} facts)`);
+      }
+
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    },
+  );
+
+  // ============================================================
   // Session Lifecycle Tools (inspired by Engram)
   // ============================================================
 
@@ -1201,6 +1281,82 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
 
       return {
         content: [{ type: 'text' as const, text: header.join('\n') + context }],
+      };
+    },
+  );
+
+  // ============================================================
+  // Export / Import
+  // ============================================================
+
+  /**
+   * memorix_export — Export project memories for sharing
+   */
+  server.registerTool(
+    'memorix_export',
+    {
+      title: 'Export Memories',
+      description:
+        'Export project observations and sessions for sharing with teammates or backup. ' +
+        'Supports JSON (full fidelity, importable) and Markdown (human-readable, for docs/PRs).',
+      inputSchema: {
+        format: z.enum(['json', 'markdown']).describe('Export format: json (importable) or markdown (human-readable)'),
+      },
+    },
+    async ({ format }) => {
+      const { exportAsJson, exportAsMarkdown } = await import('./memory/export-import.js');
+
+      if (format === 'markdown') {
+        const md = await exportAsMarkdown(projectDir, project.id);
+        return { content: [{ type: 'text' as const, text: md }] };
+      }
+
+      const data = await exportAsJson(projectDir, project.id);
+      const json = JSON.stringify(data, null, 2);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `## Export Complete\n- Observations: ${data.stats.observationCount}\n- Sessions: ${data.stats.sessionCount}\n\n\`\`\`json\n${json}\n\`\`\`\n\n> Save this JSON and use \`memorix_import\` on another machine to restore.`,
+        }],
+      };
+    },
+  );
+
+  /**
+   * memorix_import — Import memories from a JSON export
+   */
+  server.registerTool(
+    'memorix_import',
+    {
+      title: 'Import Memories',
+      description:
+        'Import observations and sessions from a JSON export (produced by memorix_export). ' +
+        'Re-assigns IDs to avoid conflicts. Skips observations with duplicate topicKeys.',
+      inputSchema: {
+        data: z.string().describe('JSON string from memorix_export output'),
+      },
+    },
+    async ({ data: jsonStr }) => {
+      const { importFromJson } = await import('./memory/export-import.js');
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        return {
+          content: [{ type: 'text' as const, text: 'Invalid JSON. Please provide the exact output from memorix_export.' }],
+          isError: true,
+        };
+      }
+
+      const result = await importFromJson(projectDir, parsed);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `## Import Complete\n- Observations imported: **${result.observationsImported}**\n- Sessions imported: **${result.sessionsImported}**\n- Skipped (duplicate topicKey): **${result.skipped}**`,
+        }],
       };
     },
   );
