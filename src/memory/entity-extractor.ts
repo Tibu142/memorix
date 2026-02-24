@@ -19,13 +19,16 @@ const ENTITY_PATTERNS: Array<{ kind: string; pattern: RegExp }> = [
   { kind: 'mention', pattern: /@([a-zA-Z_]\w+)/g },
   // CamelCase identifiers (likely class/type names)
   { kind: 'identifier', pattern: /\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g },
+  // Chinese identifiers: quoted Chinese terms or backtick-wrapped Chinese (e.g. 「认证模块」, `数据库连接`)
+  { kind: 'identifier', pattern: /[「『【]([一-鿿㐀-䶿]{2,}(?:[一-鿿㐀-䶿a-zA-Z0-9_-]*[一-鿿㐀-䶿])?)[」』】]/g },
+  { kind: 'identifier', pattern: /`([一-鿿㐀-䶿]{2,}[一-鿿㐀-䶿a-zA-Z0-9_-]*)`/g },
 ];
 
 /**
  * Patterns that indicate causal relationships.
  * Used to auto-detect causal edge types in Knowledge Graph.
  */
-const CAUSAL_PATTERN = /\b(?:because|therefore|due to|caused by|as a result|decided to|chosen because|so that|in order to|leads to|results in|fixed by|resolved by)\b/i;
+const CAUSAL_PATTERN = /\b(?:because|therefore|due to|caused by|as a result|decided to|chosen because|so that|in order to|leads to|results in|fixed by|resolved by)\b|(?:因为|所以|由于|导致|造成|结果|因此|为了|解决|修复|修正|决定|选择|采用)/i;
 
 export interface ExtractedEntities {
   files: string[];

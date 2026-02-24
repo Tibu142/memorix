@@ -56,6 +56,24 @@ describe('Entity Extractor', () => {
       // Entities < 3 chars should be filtered
       expect(result.files).not.toContain('a.b');
     });
+
+    it('should extract Chinese identifiers in brackets', () => {
+      const result = extractEntities('修改了「认证模块」的逻辑，更新了【数据库连接】配置');
+      expect(result.identifiers).toContain('认证模块');
+      expect(result.identifiers).toContain('数据库连接');
+    });
+
+    it('should extract Chinese identifiers in backticks', () => {
+      const result = extractEntities('调用 `用户管理` 接口获取 `权限验证` 结果');
+      expect(result.identifiers).toContain('用户管理');
+      expect(result.identifiers).toContain('权限验证');
+    });
+
+    it('should detect Chinese causal language', () => {
+      expect(extractEntities('因为性能问题所以改用了缓存').hasCausalLanguage).toBe(true);
+      expect(extractEntities('由于兼容性问题决定采用新方案').hasCausalLanguage).toBe(true);
+      expect(extractEntities('更新了配置文件').hasCausalLanguage).toBe(false);
+    });
   });
 
   describe('enrichConcepts', () => {
