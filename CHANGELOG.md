@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.11] — 2026-02-24
+
+### Added
+- **File locking & atomic writes** (`withFileLock`, `atomicWriteFile`) — Cross-process safe writes for `observations.json`, `graph.jsonl`, and `counter.json`. Uses `.memorix.lock` directory lock with stale detection (10s timeout) and write-to-temp-then-rename for crash safety.
+- **Retention auto-archive** — `memorix_retention` tool now supports `action="archive"` to move expired observations to `observations.archived.json`. Reversible — archived memories can be restored manually.
+- **Chinese entity extraction** — Entity extractor now recognizes Chinese identifiers in brackets (`「认证模块」`, `【数据库连接】`) and backticks, plus Chinese causal language patterns (因为/所以/由于/导致/决定/采用).
+- **Graph-memory bidirectional sync** — Dashboard DELETE now cleans up corresponding `[#id]` references from knowledge graph entities. Prevents orphaned data.
+
+### Improved
+- **Search accuracy** — Added fuzzy tolerance, field boosting (title > entityName > concepts > narrative), lowered similarity threshold to 0.5, tuned hybrid weights (text 0.6, vector 0.4).
+- **Auto-relations performance** — Entity lookups now use O(1) index (`Map`) instead of O(n) `find()` on every observation store. `KnowledgeGraphManager` maintains a `entityIndex` rebuilt on create/delete mutations.
+- **Re-read-before-write** — `storeObservation` re-reads `observations.json` inside the lock before writing, merging concurrent changes instead of overwriting.
+
 ## [0.7.10] — 2026-02-24
 
 ### Added

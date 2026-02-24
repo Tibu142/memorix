@@ -1,6 +1,6 @@
 # Memorix 已知问题 & 未来路线图
 
-> 最后更新: 2026-02-15
+> 最后更新: 2026-02-24
 
 ---
 
@@ -10,7 +10,7 @@
 
 | # | 问题 | 影响 | 状态 |
 |---|------|------|------|
-| 1 | **无文件锁** — 多 Agent 同时写入 `observations.json` 可能导致数据丢失 | 数据完整性 | 未修复 |
+| 1 | ~~**无文件锁**~~ — 多 Agent 同时写入 | 数据完整性 | ✅ v0.7.11 (`withFileLock` + `atomicWriteFile`) |
 | 2 | **Orama where 过滤不可靠** — 空 term + number filter 时结果可能不正确 | `compactDetail` 已绕过 (使用内存查找) | 已变通 |
 
 ### 🟡 中等
@@ -18,9 +18,9 @@
 | # | 问题 | 影响 | 状态 |
 |---|------|------|------|
 | 3 | **非 Git 项目的 projectId 不稳定** — 基于目录名，不同机器或路径会不同 | 数据隔离 | 未修复 |
-| 4 | **retention 只有报告没有执行** — 无自动归档/删除过期记忆 | 数据膨胀 | 需要新工具 |
-| 5 | **实体抽取不支持中文标识符** — 正则只匹配英文 | 中文项目覆盖不足 | 未修复 |
-| 6 | **auto-relations 每次读取全图** — 大图谱时性能可能下降 | 性能 | 未优化 |
+| 4 | ~~**retention 只有报告没有执行**~~ | 数据膨胀 | ✅ v0.7.11 (`archiveExpired` + `action="archive"`) |
+| 5 | ~~**实体抽取不支持中文标识符**~~ | 中文项目覆盖不足 | ✅ v0.7.11 (中文括号/反引号 + 因果语言) |
+| 6 | ~~**auto-relations 每次读取全图**~~ | 性能 | ✅ v0.7.11 (entityIndex O(1) 查找) |
 | 7 | **高重要性 observations 永远免疫** — gotcha/decision/trade-off 永不过期 | 数据膨胀 | 设计如此，需评估 |
 
 ### 🟢 轻微
@@ -35,14 +35,14 @@
 
 ## 未来路线图
 
-### Phase 1: 稳定化 (当前)
+### Phase 1: 稳定化 ✅
 - [x] Copilot Adapter 实现
 - [x] Antigravity Adapter 实现
 - [x] MCP Server 集成验证
-- [x] 274 测试通过
+- [x] 438 测试通过
 - [x] 开发文档编写
-- [ ] README 优化 (安装指南, 演示 GIF)
-- [ ] npm 发布配置优化
+- [x] README 优化 (中英双语, Antigravity 配置指南)
+- [x] npm 发布配置优化
 
 ### Phase 2: 推广 & 用户获取
 - [ ] 社区推广 (Reddit, HN, X, Discord)
@@ -50,22 +50,25 @@
 - [ ] 演示视频
 - [ ] 与其他 MCP Server 项目的对比文档
 
-### Phase 3: Web Dashboard
-- [ ] 知识图谱可视化 (D3.js / vis.js)
-- [ ] Observation 搜索/浏览 Web UI
-- [ ] 记忆保留状态仪表板
-- [ ] 跨项目记忆概览
+### Phase 3: Web Dashboard ✅
+- [x] 知识图谱可视化 (D3.js force graph)
+- [x] Observation 搜索/浏览 Web UI
+- [x] 记忆保留状态仪表板
+- [x] 跨项目记忆概览 (project switcher)
 
-### Phase 4: 功能增强
-- [ ] `memorix_compact` — 自动压缩/归档过期记忆
+### Phase 4: 功能增强 (部分完成)
+- [x] 自动归档过期记忆 (`memorix_retention action="archive"`)
+- [x] 文件锁机制 (多进程安全)
+- [x] 搜索精确度优化 (fuzzy + field boosting)
+- [x] 中文实体抽取
+- [x] 图谱-记忆双向同步
 - [ ] `memorix_export` — 导出记忆为 Markdown / JSON
 - [ ] 多项目记忆关联搜索
 - [ ] 记忆去重和冲突检测
 - [ ] LLM-based 实体抽取 (替代正则)
-- [ ] 文件锁机制 (多进程安全)
 
-### Phase 5: 新 Agent 集成
-- [ ] Kiro 完整支持
+### Phase 5: 新 Agent 集成 (部分完成)
+- [x] Kiro 完整支持
 - [ ] Trae 支持
 - [ ] Claude Desktop 支持
 - [ ] JetBrains AI 支持
@@ -110,11 +113,11 @@
 
 | 优先级 | 项目 | 说明 |
 |--------|------|------|
-| P0 | 文件锁 | 多进程写入安全 |
-| P1 | 自动归档 | retention 模块只有评估没有执行 |
+| ~~P0~~ | ~~文件锁~~ | ~~✅ v0.7.11~~ |
+| ~~P1~~ | ~~自动归档~~ | ~~✅ v0.7.11~~ |
 | P1 | projectId 稳定性 | 非 Git 项目需要更好的识别策略 |
-| P2 | 中文实体抽取 | 添加中文模式匹配正则 |
-| P2 | auto-relations 性能 | 缓存图谱或增量查询 |
+| ~~P2~~ | ~~中文实体抽取~~ | ~~✅ v0.7.11~~ |
+| ~~P2~~ | ~~auto-relations 性能~~ | ~~✅ v0.7.11~~ |
 | P3 | Orama 持久化 | 考虑 Orama 的原生持久化而非每次重建 |
 | P3 | 测试覆盖 | 添加集成测试 (端到端 MCP 调用) |
 
@@ -129,3 +132,5 @@
 | 2026-02-13 | 发现并修复 npx 缓存损坏问题 (MODULE_NOT_FOUND chownr) |
 | 2026-02-15 | 完成全部核心模块的深度代码审查 |
 | 2026-02-15 | 开发文档完成 (ARCHITECTURE, MODULES, DEVELOPMENT, DESIGN_DECISIONS, API_REFERENCE) |
+| 2026-02-24 | v0.7.8-0.7.10: Antigravity 兼容 + MCP roots + 中英双语文档 |
+| 2026-02-24 | v0.7.11: P0-P2 全部完成 (文件锁 + 搜索优化 + 自动归档 + 中文实体 + 性能优化 + 图谱同步) |
