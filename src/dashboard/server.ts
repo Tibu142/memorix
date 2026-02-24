@@ -13,7 +13,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { exec } from 'node:child_process';
 
-import { loadGraphJsonl, loadObservationsJson, saveObservationsJson, loadIdCounter, getBaseDataDir } from '../store/persistence.js';
+import { loadGraphJsonl, saveGraphJsonl, loadObservationsJson, saveObservationsJson, loadIdCounter, getBaseDataDir } from '../store/persistence.js';
 import { withFileLock } from '../store/file-lock.js';
 
 // MIME types for static file serving
@@ -240,6 +240,22 @@ async function handleApi(
                         } else {
                             allObs.splice(idx, 1);
                             await saveObservationsJson(effectiveDataDir, allObs);
+
+                            // Sync: clean up graph entity references for this observation
+                            try {
+                                const graph = await loadGraphJsonl(effectiveDataDir);
+                                const prefix = `[#${obsId}] `;
+                                let graphChanged = false;
+                                for (const entity of graph.entities) {
+                                    const before = entity.observations.length;
+                                    entity.observations = entity.observations.filter(o => !o.startsWith(prefix));
+                                    if (entity.observations.length < before) graphChanged = true;
+                                }
+                                if (graphChanged) {
+                                    await saveGraphJsonl(effectiveDataDir, graph.entities, graph.relations);
+                                }
+                            } catch { /* graph sync is best-effort */ }
+
                             sendJson(res, { ok: true, deleted: obsId });
                         }
                     });
