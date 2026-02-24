@@ -121,16 +121,23 @@ args = ["-y", "memorix@latest", "serve"]
 
 **Config file:** `~/.gemini/antigravity/settings/mcp_config.json`
 
+> **⚠️ Important:** Antigravity sets its working directory to its own install path (e.g., `G:\Antigravity`) and does not support the MCP roots protocol. You **must** set `MEMORIX_PROJECT_ROOT` to your project path. Update it when switching projects.
+
 ```json
 {
   "mcpServers": {
     "memorix": {
       "command": "npx",
-      "args": ["-y", "memorix@latest", "serve"]
+      "args": ["-y", "memorix@latest", "serve"],
+      "env": {
+        "MEMORIX_PROJECT_ROOT": "E:/your/project/path"
+      }
     }
   }
 }
 ```
+
+All other IDEs (Windsurf, Cursor, Claude Code, Codex, Copilot, Kiro) correctly set `process.cwd()` to the project directory and work without `MEMORIX_PROJECT_ROOT`.
 
 ---
 
@@ -207,5 +214,17 @@ Memorix v0.7.3+ automatically bypasses this with `safe.directory=*` and falls ba
 
 ### Project detected as `local/<name>` instead of `owner/repo`
 Update to v0.7.3+ which fixes Windows git remote detection.
+
+### Antigravity: "Error: no tools returned"
+Antigravity does not set `cwd` to your project and does not support MCP roots. Add `MEMORIX_PROJECT_ROOT` to your MCP config (see [Antigravity section](#antigravity) above).
+
+### Project detection priority
+Memorix resolves the project root in this order:
+1. `--cwd` CLI argument
+2. `MEMORIX_PROJECT_ROOT` environment variable
+3. `INIT_CWD` (npm lifecycle)
+4. `process.cwd()` (set by IDE)
+5. MCP roots protocol (requested from IDE client)
+6. Error with instructions
 
 [← Back to main README](../README.md)

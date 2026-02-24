@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.10] — 2026-02-24
+
+### Added
+- **Chinese README** (`README.zh-CN.md`) — Full bilingual documentation with language switcher at the top of both README files.
+- **Antigravity config guide** — Collapsible note in README Quick Start and updated `docs/SETUP.md` Antigravity section explaining the `MEMORIX_PROJECT_ROOT` requirement, why it's needed (cwd + MCP roots both unavailable), and how to configure it.
+- **Project detection priority documentation** — Clear detection chain (`--cwd` → `MEMORIX_PROJECT_ROOT` → `INIT_CWD` → `process.cwd()` → MCP roots → error) in README, SETUP.md, and troubleshooting section.
+
 ## [0.7.9] — 2026-02-24
 
 ### Fixed
