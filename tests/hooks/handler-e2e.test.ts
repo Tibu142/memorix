@@ -194,7 +194,7 @@ export function verifyToken(token: string) {
   });
 
   // ─── PreCompact ───
-  it('should always store on PreCompact event', async () => {
+  it('should SKIP empty PreCompact (no content to save)', async () => {
     const payload = {
       hook_event_name: 'PreCompact',
       session_id: 'sess-claude-9',
@@ -205,7 +205,20 @@ export function verifyToken(token: string) {
     expect(input.event).toBe('pre_compact');
 
     const { observation } = await handleHookEvent(input);
-    // pre_compact always stores
+    // Empty PreCompact has no content → should be filtered out
+    expect(observation).toBeNull();
+  });
+
+  it('should store PreCompact with substantial content', async () => {
+    const payload = {
+      hook_event_name: 'PreCompact',
+      session_id: 'sess-claude-9b',
+      cwd: '/home/user/project',
+      prompt: 'We discussed the authentication architecture and decided to use JWT with refresh tokens. The main concern was session invalidation, which we solved with a Redis-backed blacklist.',
+    };
+
+    const input = normalizeHookInput(payload);
+    const { observation } = await handleHookEvent(input);
     expect(observation).not.toBeNull();
   });
 
@@ -238,6 +251,32 @@ export function verifyToken(token: string) {
     const input = normalizeHookInput(payload);
     const { observation } = await handleHookEvent(input);
     expect(observation).toBeNull();
+  });
+
+  // ─── File-modifying tools always store (no pattern needed) ───
+  it('should store Write tool even without pattern keywords', async () => {
+    const payload = {
+      hook_event_name: 'PostToolUse',
+      session_id: 'sess-claude-13',
+      cwd: '/home/user/project',
+      tool_name: 'Write',
+      tool_input: {
+        file_path: '/home/user/project/src/utils.ts',
+        content: `export function formatDate(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+export function sleep(ms: number) {
+  return new Promise(r => setTimeout(r, ms));
+}`,
+      },
+      tool_response: 'File written successfully',
+    };
+
+    const input = normalizeHookInput(payload);
+    const { observation } = await handleHookEvent(input);
+    // No pattern keywords in the content, but Write is a file-modifying tool → always store
+    expect(observation).not.toBeNull();
+    expect(observation!.type).toBe('what-changed');
   });
 
   // ─── Noise: Read tool with trivial content ───

@@ -166,9 +166,9 @@ function normalizeClaude(payload: Record<string, unknown>, event: HookEvent): Pa
     }
   }
 
-  // UserPromptSubmit
-  if (event === 'user_prompt') {
-    result.userPrompt = (payload.prompt as string) ?? '';
+  // Extract prompt if present (UserPromptSubmit, PreCompact, etc.)
+  if (payload.prompt) {
+    result.userPrompt = payload.prompt as string;
   }
 
   return result;

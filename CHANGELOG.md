@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.15] — 2026-02-26
+
+### Fixed
+- **Feedback visibility** — Hook auto-stores were silent. Now returns `systemMessage` to the agent after each save, e.g. `🟢 Memorix saved: Updated auth.ts [what-changed]`. Gives Codex-like visibility into what memorix is recording.
+- **File-modifying tools always store** — Write/Edit/MultiEdit tool events were rejected when content lacked pattern keywords (e.g., writing utility functions with no "error"/"fix" keywords). Now file-modifying tools always store if content > 100 chars, classified as `what-changed` by default.
+- **PreCompact low-quality spam** — PreCompact events stored empty/minimal observations with no meaningful content. Now requires `MIN_STORE_LENGTH` (100 chars) to store.
+- **Normalizer prompt extraction** — `normalizeClaude` only extracted `prompt` for `user_prompt` events. Now extracts for all events (PreCompact, etc.), preserving context that would otherwise be lost.
+
 ## [0.9.14] — 2026-02-26
 
 ### Fixed

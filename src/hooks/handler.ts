@@ -167,7 +167,9 @@ function generateTitle(input: NormalizedHookInput, patternType: string): string 
  */
 function buildObservation(input: NormalizedHookInput, content: string) {
   const pattern = detectBestPattern(content);
-  const obsType = (pattern ? patternToObservationType(pattern.type) : 'discovery') as ObservationType;
+  // Default: file modifications → 'what-changed', others → 'discovery'
+  const fallbackType = input.filePath ? 'what-changed' : 'discovery';
+  const obsType = (pattern ? patternToObservationType(pattern.type) : fallbackType) as ObservationType;
 
   return {
     entityName: deriveEntityName(input),
@@ -302,12 +304,17 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
       };
     }
 
-    case 'pre_compact':
-      // Context is about to be compressed — save what we can
+    case 'pre_compact': {
+      // Context is about to be compressed — save what we can, but filter empty/noise
+      const compactContent = extractContent(input);
+      if (compactContent.length < MIN_STORE_LENGTH) {
+        return { observation: null, output: defaultOutput };
+      }
       return {
-        observation: buildObservation(input, extractContent(input)),
+        observation: buildObservation(input, compactContent),
         output: defaultOutput,
       };
+    }
 
     case 'session_end':
       // Always record session end (no cooldown)
@@ -397,8 +404,21 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
         return { observation: null, output: defaultOutput };
       }
 
+      // File-modifying tools (Write, Edit, MultiEdit) — always store
+      // These are code changes, inherently worth recording
+      const isFileModifyingTool = /^(write|edit|multi_?edit|multiedittool|create|patch|insert)/i.test(
+        input.toolName ?? '',
+      );
+      if (isFileModifyingTool) {
+        markTriggered(toolKey);
+        return {
+          observation: buildObservation(input, toolContent),
+          output: defaultOutput,
+        };
+      }
+
+      // Other tools (Read, Search, etc.) — require pattern OR substantial content
       const toolPattern = detectBestPattern(toolContent);
-      // Store if pattern detected OR content is substantial (>200 chars)
       if (!toolPattern && toolContent.length < 200) {
         return { observation: null, output: defaultOutput };
       }
@@ -486,6 +506,16 @@ export async function runHook(): Promise<void> {
       await initObservations(dataDir);
 
       await storeObservation({ ...observation, projectId: project.id });
+
+      // Feedback: tell the agent what was saved (Codex-like visibility)
+      const TYPE_EMOJI: Record<string, string> = {
+        'gotcha': '🔴', 'decision': '🟤', 'problem-solution': '🟡',
+        'trade-off': '⚖️', 'discovery': '🟣', 'how-it-works': '🔵',
+        'what-changed': '🟢', 'why-it-exists': '🟠', 'session-request': '🎯',
+      };
+      const emoji = TYPE_EMOJI[observation.type] ?? '📝';
+      output.systemMessage = (output.systemMessage ?? '') +
+        `\n${emoji} Memorix saved: ${observation.title} [${observation.type}]`;
     } catch {
       // Silent fail — hooks must never break the agent
     }
