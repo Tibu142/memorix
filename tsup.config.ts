@@ -20,7 +20,13 @@ export default defineConfig([
     sourcemap: true,
     splitting: false,
     shims: true,
-    banner: { js: '#!/usr/bin/env node' },
+    banner: {
+      js: [
+        '#!/usr/bin/env node',
+        'import {createRequire as __memorix_cjsRequire} from "module";',
+        'const require = __memorix_cjsRequire(import.meta.url);',
+      ].join('\n'),
+    },
     // Bundle all dependencies into CLI for portable global install
     noExternal: [/^(?!(fastembed|@huggingface\/transformers))/],
     external: ['fastembed', '@huggingface/transformers'],

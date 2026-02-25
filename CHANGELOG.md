@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.11] — 2026-02-25
+
+### Fixed
+- **CLI crashes with `Dynamic require of "fs" is not supported`** — When bundling CJS dependencies (like `gray-matter`) into ESM output via `noExternal`, esbuild's CJS-to-ESM wrapper couldn't resolve Node.js built-in modules. Added `createRequire` banner to provide a real `require` function before esbuild's wrapper runs, fixing `require('fs')` and other built-in module calls.
+
 ## [0.9.10] — 2026-02-25
 
 ### Fixed
