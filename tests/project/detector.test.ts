@@ -27,4 +27,16 @@ describe('Project Detector', () => {
     expect(project.id).toBeTruthy();
     expect(project.gitRemote).toBeUndefined();
   });
+
+  it('should work with empty directories (no git, no project files)', async () => {
+    const { mkdtempSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const emptyDir = mkdtempSync(join(tmpdir(), 'memorix-test-'));
+    const project = detectProject(emptyDir);
+    // Should NOT return __invalid__ — empty dirs are valid projects
+    expect(project.id).not.toBe('__invalid__');
+    expect(project.id).toMatch(/^local\//);
+    expect(project.name).toBeTruthy();
+  });
 });

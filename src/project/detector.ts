@@ -33,33 +33,33 @@ export function detectProject(cwd?: string): ProjectInfo {
   // Validate the root before creating a fallback project.
   // This prevents home dirs, system dirs, and IDE config dirs from
   // becoming phantom projects with garbage data directories.
-  if (!isValidProjectRoot(rootPath)) {
+  if (isDangerousRoot(rootPath)) {
     // Use a generic sentinel ID — data will NOT be persisted
     console.error(`[memorix] Skipped invalid project root: ${rootPath}`);
     return { id: '__invalid__', name: 'unknown', rootPath };
   }
 
-  // Fallback: use "local/<dirname>" to distinguish non-git projects
+  // Fallback: use "local/<dirname>" — works for non-git and empty directories
   const name = path.basename(rootPath);
   const id = `local/${name}`;
-  console.error(`[memorix] Warning: no git remote found at ${rootPath}, using fallback projectId: ${id}`);
   return { id, name, rootPath };
 }
 
 /**
- * Check whether a directory looks like a real project root.
- * Returns false for home directories, OS system directories,
+ * Check whether a directory is a dangerous/invalid project root.
+ * Returns TRUE for home directories, OS system directories,
  * drive roots, and IDE/tool configuration directories.
+ * Returns FALSE for normal directories (including empty ones).
  */
-function isValidProjectRoot(dirPath: string): boolean {
+function isDangerousRoot(dirPath: string): boolean {
   const resolved = path.resolve(dirPath);
   const home = path.resolve(os.homedir());
 
   // Reject the home directory itself (e.g., C:\Users\Lenovo, /home/user)
-  if (resolved === home) return false;
+  if (resolved === home) return true;
 
   // Reject drive roots (C:\, D:\, /)
-  if (resolved === path.parse(resolved).root) return false;
+  if (resolved === path.parse(resolved).root) return true;
 
   // Reject immediate children of home that are IDE/tool config dirs
   const basename = path.basename(resolved).toLowerCase();
@@ -78,18 +78,11 @@ function isValidProjectRoot(dirPath: string): boolean {
     const parent = path.resolve(path.dirname(resolved));
     // Only block if it's directly under home or a drive root
     if (parent === home || parent === path.parse(parent).root) {
-      return false;
+      return true;
     }
   }
 
-  // Must have at least ONE project indicator file
-  const projectIndicators = [
-    'package.json', 'Cargo.toml', 'go.mod', 'pyproject.toml',
-    'setup.py', 'pom.xml', 'build.gradle', 'Makefile',
-    'CMakeLists.txt', 'composer.json', 'Gemfile',
-    '.git', 'README.md', 'README',
-  ];
-  return projectIndicators.some(f => existsSync(path.join(resolved, f)));
+  return false;
 }
 
 /**
@@ -100,6 +93,8 @@ function findPackageRoot(cwd: string): string | null {
   let dir = path.resolve(cwd);
   const root = path.parse(dir).root;
   while (dir !== root) {
+    // Stop walking if we hit a dangerous directory (home dir, system dir)
+    if (isDangerousRoot(dir)) return null;
     if (existsSync(path.join(dir, 'package.json'))) {
       return dir;
     }

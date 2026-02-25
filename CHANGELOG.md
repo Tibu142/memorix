@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.2] — 2026-02-25
+
+### Fixed
+- **Empty directory support** — Memorix now starts successfully in any directory, even without `.git` or `package.json`. No more `__invalid__` project errors for brand new folders. Only truly dangerous directories (home dir, drive root, system dirs) are rejected.
+- **`findPackageRoot` safety** — Walking up from temp/nested directories no longer accidentally selects the home directory as project root.
+
+### Changed
+- **README rewrite** — Complete rewrite of Quick Start section for both EN and 中文 READMEs:
+  - Two-step install (global install + MCP config) instead of error-prone `npx`
+  - Per-agent config examples (Claude Code, Cursor, Windsurf, etc.)
+  - Troubleshooting table for common errors
+  - AI-friendly: agents reading the README will now configure correctly on first try
+
 ## [0.9.1] — 2026-02-25
 
 ### Fixed

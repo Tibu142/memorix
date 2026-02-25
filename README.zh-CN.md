@@ -49,35 +49,90 @@
 
 ## ⚡ 30 秒快速开始
 
-在你的 Agent 的 MCP 配置文件中添加以下内容，重启即可：
+### 第一步：全局安装（只需一次）
 
+```bash
+npm install -g memorix
+```
+
+> ⚠️ **不要用 `npx`** — npx 每次都会重新下载包，会导致 MCP 服务器初始化超时（60 秒限制）。全局安装后秒启动。
+
+### 第二步：添加到你的 Agent 的 MCP 配置
+
+<details open>
+<summary><strong>Claude Code</strong></summary>
+
+在终端执行：
+```bash
+claude mcp add memorix -- memorix serve
+```
+或手动添加到 `~/.claude.json`：
 ```json
 {
   "mcpServers": {
     "memorix": {
-      "command": "npx",
-      "args": ["-y", "memorix@latest", "serve"]
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+添加到项目目录的 `.cursor/mcp.json`：
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Windsurf</strong></summary>
+
+添加到 Windsurf MCP 配置（`~/.codeium/windsurf/mcp_config.json`）：
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>VS Code Copilot / Codex / Kiro / Antigravity</strong></summary>
+
+同样的格式 — 添加到对应 Agent 的 MCP 配置文件：
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
     }
   }
 }
 ```
 
-> 📖 **配置文件在哪里？** → [7 个 Agent 的完整配置指南](docs/SETUP.md)
-> Windsurf • Cursor • Claude Code • Codex • VS Code Copilot • Kiro • Antigravity
-
-就是这样。不需要 API Key，不需要云账号，不需要额外依赖。开箱即用。
-
-<details>
-<summary>⚠️ <strong>Antigravity 用户：需要额外配置</strong></summary>
-
-Antigravity 会将工作目录设为自身安装路径（如 `G:\Antigravity`），而不是你的项目目录，且不支持 MCP roots 协议。你**必须**添加 `MEMORIX_PROJECT_ROOT`：
-
+**仅 Antigravity：** Antigravity 使用自身安装路径作为工作目录，**必须**添加：
 ```json
 {
   "mcpServers": {
     "memorix": {
-      "command": "npx",
-      "args": ["-y", "memorix@latest", "serve"],
+      "command": "memorix",
+      "args": ["serve"],
       "env": {
         "MEMORIX_PROJECT_ROOT": "E:/your/project/path"
       }
@@ -85,8 +140,23 @@ Antigravity 会将工作目录设为自身安装路径（如 `G:\Antigravity`）
   }
 }
 ```
+</details>
 
-切换项目时需要更新 `MEMORIX_PROJECT_ROOT`。其他所有 IDE 都不需要这个配置。
+### 第三步：重启你的 Agent — 完成！
+
+不需要 API Key，不需要云账号，不需要额外依赖。**任何目录都能用**（有没有 git 都行）。
+
+> 📖 **7 个 Agent 的完整配置指南** → [docs/SETUP.md](docs/SETUP.md)
+
+<details>
+<summary><strong>🔧 常见问题</strong></summary>
+
+| 问题 | 解决方案 |
+|------|----------|
+| `MCP server initialization timed out after 60 seconds` | 你在用 `npx`。执行 `npm install -g memorix`，然后把配置改成 `"command": "memorix"` |
+| `Cannot start Memorix: no valid project detected` | 你的工作目录是系统目录（主目录、桌面等）。打开一个真正的项目文件夹，或设置 `MEMORIX_PROJECT_ROOT` |
+| `memorix: command not found` | 先执行 `npm install -g memorix`，用 `memorix --version` 验证 |
+| 参数类型错误（GLM/非 Anthropic 模型） | 更新到 v0.9.1+：`npm install -g memorix@latest` |
 
 </details>
 

@@ -49,35 +49,90 @@ Your AI assistant forgets everything when you start a new chat. You spend 10 min
 
 ## ⚡ Get Started in 30 Seconds
 
-Add this to your agent's MCP config file, restart — done:
+### Step 1: Install globally (one-time)
 
+```bash
+npm install -g memorix
+```
+
+> ⚠️ **Do NOT use `npx`** — npx downloads the package every time, which causes MCP server initialization timeout (60s limit). Global install starts instantly.
+
+### Step 2: Add to your agent's MCP config
+
+<details open>
+<summary><strong>Claude Code</strong></summary>
+
+Run in terminal:
+```bash
+claude mcp add memorix -- memorix serve
+```
+Or manually add to `~/.claude.json`:
 ```json
 {
   "mcpServers": {
     "memorix": {
-      "command": "npx",
-      "args": ["-y", "memorix@latest", "serve"]
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+Add to `.cursor/mcp.json` in your project:
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Windsurf</strong></summary>
+
+Add to Windsurf MCP settings (`~/.codeium/windsurf/mcp_config.json`):
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>VS Code Copilot / Codex / Kiro / Antigravity</strong></summary>
+
+Same format — add to the agent's MCP config file:
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
     }
   }
 }
 ```
 
-> 📖 **Where is my config file?** → [Full setup guide for all 7 agents](docs/SETUP.md)
-> Windsurf • Cursor • Claude Code • Codex • VS Code Copilot • Kiro • Antigravity
-
-That's it. No API keys. No cloud accounts. No dependencies. Just works.
-
-<details>
-<summary>⚠️ <strong>Antigravity users: extra config required</strong></summary>
-
-Antigravity sets its working directory to its own install path (e.g., `G:\Antigravity`) instead of your project directory, and does not support the MCP roots protocol. You **must** add `MEMORIX_PROJECT_ROOT`:
-
+**Antigravity only:** Antigravity uses its own install path as CWD. You **must** add:
 ```json
 {
   "mcpServers": {
     "memorix": {
-      "command": "npx",
-      "args": ["-y", "memorix@latest", "serve"],
+      "command": "memorix",
+      "args": ["serve"],
       "env": {
         "MEMORIX_PROJECT_ROOT": "E:/your/project/path"
       }
@@ -85,8 +140,23 @@ Antigravity sets its working directory to its own install path (e.g., `G:\Antigr
   }
 }
 ```
+</details>
 
-You'll need to update `MEMORIX_PROJECT_ROOT` when switching projects. All other IDEs work without this.
+### Step 3: Restart your agent — done!
+
+No API keys. No cloud accounts. No dependencies. Works with any directory (git repo or not).
+
+> 📖 **Full setup guide for all 7 agents** → [docs/SETUP.md](docs/SETUP.md)
+
+<details>
+<summary><strong>🔧 Troubleshooting</strong></summary>
+
+| Problem | Solution |
+|---------|----------|
+| `MCP server initialization timed out after 60 seconds` | You're using `npx`. Run `npm install -g memorix` and change config to `"command": "memorix"` |
+| `Cannot start Memorix: no valid project detected` | Your CWD is a system directory (home, Desktop, etc). Open a real project folder or set `MEMORIX_PROJECT_ROOT` |
+| `memorix: command not found` | Run `npm install -g memorix` first. Verify with `memorix --version` |
+| Parameter type errors (GLM/non-Anthropic models) | Update to v0.9.1+: `npm install -g memorix@latest` |
 
 </details>
 
