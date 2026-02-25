@@ -101,17 +101,19 @@ function generateWindsurfConfig(): Record<string, unknown> {
  */
 function generateCursorConfig(): Record<string, unknown> {
   const cmd = `${resolveHookCommand()} hook`;
+  // Cursor hooks format: version (number) + each event is an array of hook scripts
+  // See: https://cursor.com/docs/agent/hooks
+  const hookScript = { command: cmd };
   return {
+    version: 1,
     hooks: {
-      beforeSubmitPrompt: {
-        command: cmd,
-      },
-      afterFileEdit: {
-        command: cmd,
-      },
-      stop: {
-        command: cmd,
-      },
+      sessionStart: [hookScript],
+      beforeSubmitPrompt: [hookScript],
+      afterFileEdit: [hookScript],
+      beforeShellExecution: [hookScript],
+      afterMCPExecution: [hookScript],
+      preCompact: [hookScript],
+      stop: [hookScript],
     },
   };
 }

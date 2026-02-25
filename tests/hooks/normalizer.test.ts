@@ -18,12 +18,12 @@ describe('Hook Normalizer', () => {
       expect(input.filePath).toBe('/src/app.ts');
     });
 
-    it('should detect Cursor from hook_event_name + conversation_id', () => {
+    it('should detect Cursor from workspace_roots + payload fields', () => {
       const input = normalizeHookInput({
-        hook_event_name: 'afterFileEdit',
-        conversation_id: 'conv-456',
-        generation_id: 'gen-789',
+        session_id: 'conv-456',
         file_path: '/src/main.ts',
+        old_content: 'const a = 1;',
+        new_content: 'const a = 2;',
         workspace_roots: ['/home/user/project'],
       });
       expect(input.agent).toBe('cursor');

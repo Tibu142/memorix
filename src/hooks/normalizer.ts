@@ -40,11 +40,16 @@ const EVENT_MAP: Record<string, HookEvent> = {
   post_mcp_tool_use: 'post_tool',
   post_cascade_response: 'post_response',
 
-  // Cursor
+  // Cursor (camelCase event names)
+  sessionStart: 'session_start',
+  sessionEnd: 'session_end',
   beforeSubmitPrompt: 'user_prompt',
   beforeShellExecution: 'post_command',
+  afterShellExecution: 'post_command',
   beforeMCPExecution: 'post_tool',
+  afterMCPExecution: 'post_tool',
   afterFileEdit: 'post_edit',
+  preCompact: 'pre_compact',
   stop: 'session_end',
 };
 
@@ -55,8 +60,9 @@ function detectAgent(payload: Record<string, unknown>): AgentName {
   // Windsurf uses agent_action_name
   if ('agent_action_name' in payload) return 'windsurf';
 
-  // Cursor uses hook_event_name (snake_case) + conversation_id
-  if ('hook_event_name' in payload && 'conversation_id' in payload) return 'cursor';
+  // Cursor sends workspace_roots or is_background_agent (unique to Cursor)
+  // It does NOT send hook_event_name — each hook event fires separately
+  if ('workspace_roots' in payload || 'is_background_agent' in payload || 'composer_mode' in payload) return 'cursor';
 
   // Claude Code uses hook_event_name (snake_case) WITHOUT conversation_id
   // Official payload: { hook_event_name: "PostToolUse", session_id: "...", ... }
@@ -82,7 +88,8 @@ function extractEventName(payload: Record<string, unknown>, agent: AgentName): s
     case 'windsurf':
       return (payload.agent_action_name as string) ?? '';
     case 'cursor':
-      return (payload.hook_event_name as string) ?? '';
+      // Cursor doesn't send event name — infer from payload fields
+      return inferCursorEvent(payload);
     case 'claude':
       // Claude Code uses hook_event_name (snake_case)
       return (payload.hook_event_name as string) ?? (payload.hookEventName as string) ?? '';
@@ -183,11 +190,27 @@ function normalizeWindsurf(payload: Record<string, unknown>, event: HookEvent): 
 }
 
 /**
+ * Infer Cursor event type from payload fields.
+ * Cursor doesn't send an event name — each hook fires a separate command.
+ */
+function inferCursorEvent(payload: Record<string, unknown>): string {
+  if ('composer_mode' in payload) return 'sessionStart';
+  if ('prompt' in payload) return 'beforeSubmitPrompt';
+  if ('old_content' in payload || 'new_content' in payload) return 'afterFileEdit';
+  if ('command' in payload && 'cwd' in payload) return 'beforeShellExecution';
+  if ('trigger' in payload && 'context_usage_percent' in payload) return 'preCompact';
+  if ('reason' in payload && 'duration_ms' in payload) return 'sessionEnd';
+  if ('mcp_server_name' in payload) return 'afterMCPExecution';
+  if ('reason' in payload) return 'stop';
+  return '';
+}
+
+/**
  * Normalize a Cursor payload.
  */
 function normalizeCursor(payload: Record<string, unknown>, event: HookEvent): Partial<NormalizedHookInput> {
   const result: Partial<NormalizedHookInput> = {
-    sessionId: (payload.conversation_id as string) ?? '',
+    sessionId: (payload.session_id as string) ?? (payload.conversation_id as string) ?? '',
     cwd: (payload.cwd as string) ?? '',
   };
 
@@ -205,6 +228,11 @@ function normalizeCursor(payload: Record<string, unknown>, event: HookEvent): Pa
       break;
     case 'post_edit':
       result.filePath = (payload.file_path as string) ?? '';
+      break;
+    case 'post_tool':
+      result.toolName = (payload.mcp_server_name as string) ?? '';
+      result.toolInput = payload.mcp_tool_input as Record<string, unknown> | undefined;
+      result.toolResult = payload.mcp_tool_output as string | undefined;
       break;
   }
 

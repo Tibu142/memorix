@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.9] — 2026-02-25
+
+### Fixed
+- **Cursor hooks config format invalid** — Generated config was missing required `version` field and used objects instead of arrays for hook scripts. Cursor requires `{ version: 1, hooks: { eventName: [{ command: "..." }] } }` format. Added `sessionStart`, `beforeShellExecution`, `afterMCPExecution`, `preCompact` events.
+- **Cursor agent detection failed** — Cursor does NOT send `hook_event_name` like Claude Code. Detection now uses Cursor-specific fields (`workspace_roots`, `is_background_agent`, `composer_mode`). Event type inferred from payload structure (e.g., `old_content`/`new_content` → `afterFileEdit`).
+- **Cursor `session_id` field not read** — Normalizer expected `conversation_id` but Cursor sends `session_id`. Now reads both with fallback.
+
 ## [0.9.8] — 2026-02-25
 
 ### Fixed
