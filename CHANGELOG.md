@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.17] — 2026-02-26
+
+### Fixed
+- **Session activity noise** — Empty `session_end` events were unconditionally stored, generating ~8.5% of all observations as useless `"Session activity (discovery)"` entries. Now requires content ≥ 50 chars, matching the quality-first philosophy of 0.9.16.
+
 ## [0.9.16] — 2026-02-26
 
 ### Architecture

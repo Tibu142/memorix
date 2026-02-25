@@ -178,7 +178,7 @@ export function verifyToken(token: string) {
   });
 
   // ─── Stop (session end) ───
-  it('should always store on Stop event', async () => {
+  it('should SKIP empty Stop event (no content worth storing)', async () => {
     const payload = {
       hook_event_name: 'Stop',
       session_id: 'sess-claude-8',
@@ -189,7 +189,20 @@ export function verifyToken(token: string) {
     expect(input.event).toBe('session_end');
 
     const { observation } = await handleHookEvent(input);
-    // session_end always stores (no length check)
+    // Empty session_end has no content worth remembering
+    expect(observation).toBeNull();
+  });
+
+  it('should store Stop event with substantial content', async () => {
+    const payload = {
+      hook_event_name: 'Stop',
+      session_id: 'sess-claude-8b',
+      cwd: '/home/user/project',
+      prompt: 'Completed refactoring the authentication module with JWT tokens and bcrypt password hashing',
+    };
+
+    const input = normalizeHookInput(payload);
+    const { observation } = await handleHookEvent(input);
     expect(observation).not.toBeNull();
   });
 

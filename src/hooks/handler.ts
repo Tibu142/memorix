@@ -326,8 +326,12 @@ export async function handleHookEvent(input: NormalizedHookInput): Promise<{
     return handleSessionStart(input);
   }
   if (input.event === 'session_end') {
+    const endContent = extractContent(input);
+    if (endContent.length < 50) {
+      return { observation: null, output: defaultOutput };
+    }
     return {
-      observation: buildObservation(input, extractContent(input), 'unknown'),
+      observation: buildObservation(input, endContent, 'unknown'),
       output: defaultOutput,
     };
   }
