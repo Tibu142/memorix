@@ -167,17 +167,46 @@ No API keys. No cloud accounts. No dependencies. Works with any directory (git r
 
 > 📖 **Full setup guide for all 8 agents** → [docs/SETUP.md](docs/SETUP.md)
 
-<details>
-<summary><strong>🔧 Troubleshooting</strong></summary>
+### 🔧 Troubleshooting — MCP Connection Issues
 
-| Problem | Solution |
-|---------|----------|
-| `MCP server initialization timed out after 60 seconds` | You're using `npx`. Run `npm install -g memorix` and change config to `"command": "memorix"` |
-| `Cannot start Memorix: no valid project detected` | Your CWD is a system directory (home, Desktop, etc). Open a real project folder or set `MEMORIX_PROJECT_ROOT` |
-| `memorix: command not found` | Run `npm install -g memorix` first. Verify with `memorix --version` |
-| Parameter type errors (GLM/non-Anthropic models) | Update to v0.9.1+: `npm install -g memorix@latest` |
+> **⚠️ #1 Mistake: Do NOT manually run `memorix serve` in a terminal.**
+> MCP uses **stdio transport** — your IDE (Claude Code, Cursor, etc.) launches memorix as a subprocess automatically. Running it manually in PowerShell/Terminal does nothing for the IDE connection.
 
-</details>
+**Quick diagnostic** — run this first:
+```bash
+memorix --version       # Should print version number
+memorix serve --cwd .   # Should show "[memorix] MCP Server running on stdio"
+```
+If either fails, follow the table below:
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `memorix · ✗ failed` in IDE | IDE can't find the `memorix` command | Run `npm install -g memorix`. On Windows, **restart your IDE** after install so it picks up the new PATH |
+| `MCP server initialization timed out` | Using `npx` (downloads every time) | Switch to global install: `npm install -g memorix`, change config to `"command": "memorix"` |
+| Repeated "Reconnected to memorix" then fails | memorix process crashes on startup | Check: 1) Node.js ≥ 18 (`node -v`), 2) open a **real project folder** (not Desktop/Home), 3) set `MEMORIX_PROJECT_ROOT` in MCP config |
+| `Cannot start Memorix: no valid project detected` | CWD is a system directory | Open a project folder with code, or add `"env": { "MEMORIX_PROJECT_ROOT": "/path/to/project" }` to your MCP config |
+| `memorix: command not found` | npm global bin not in PATH | Run `npm config get prefix` to find install location, add its `bin/` to your system PATH, then restart IDE |
+| Works in terminal but not in IDE | IDE uses a different PATH than your shell | **Windows:** restart IDE after `npm install -g`. **macOS/Linux:** ensure `~/.bashrc` or `~/.zshrc` exports the npm global bin path |
+| Parameter type errors | Old version or non-Anthropic model quirks | Update: `npm install -g memorix@latest` |
+
+**Correct `.claude.json` config:**
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+**❌ Wrong** — do NOT use any of these:
+```
+"command": "npx"                    ← will timeout
+"command": "npx -y memorix serve"   ← wrong format
+"command": "node memorix serve"     ← not how it works
+```
 
 ---
 

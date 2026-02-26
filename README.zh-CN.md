@@ -167,17 +167,46 @@ claude mcp add memorix -- memorix serve
 
 > 📖 **8 个 Agent 的完整配置指南** → [docs/SETUP.md](docs/SETUP.md)
 
-<details>
-<summary><strong>🔧 常见问题</strong></summary>
+### 🔧 常见问题 — MCP 连接失败
 
-| 问题 | 解决方案 |
-|------|----------|
-| `MCP server initialization timed out after 60 seconds` | 你在用 `npx`。执行 `npm install -g memorix`，然后把配置改成 `"command": "memorix"` |
-| `Cannot start Memorix: no valid project detected` | 你的工作目录是系统目录（主目录、桌面等）。打开一个真正的项目文件夹，或设置 `MEMORIX_PROJECT_ROOT` |
-| `memorix: command not found` | 先执行 `npm install -g memorix`，用 `memorix --version` 验证 |
-| 参数类型错误（GLM/非 Anthropic 模型） | 更新到 v0.9.1+：`npm install -g memorix@latest` |
+> **⚠️ 最常见的错误：不要在终端手动运行 `memorix serve`！**
+> MCP 使用 **stdio 传输** — 你的 IDE（Claude Code、Cursor 等）会自动启动 memorix 子进程。在 PowerShell/终端里手动运行对 IDE 连接毫无帮助。
 
-</details>
+**快速诊断** — 先在终端跑这两条命令：
+```bash
+memorix --version       # 应该输出版本号
+memorix serve --cwd .   # 应该显示 "[memorix] MCP Server running on stdio"
+```
+如果任何一条失败，参考下表：
+
+| 症状 | 原因 | 解决方案 |
+|------|------|----------|
+| IDE 里显示 `memorix · ✗ failed` | IDE 找不到 `memorix` 命令 | 执行 `npm install -g memorix`。Windows 用户安装后**必须重启 IDE** 才能识别新的 PATH |
+| `MCP server initialization timed out` | 使用了 `npx`（每次都重新下载） | 改用全局安装：`npm install -g memorix`，配置改成 `"command": "memorix"` |
+| 反复出现 "Reconnected to memorix" 最终失败 | memorix 进程启动后崩溃 | 检查：1) Node.js ≥ 18（`node -v`），2) 打开**真正的项目文件夹**（不是桌面/主目录），3) 在 MCP 配置中设置 `MEMORIX_PROJECT_ROOT` |
+| `Cannot start Memorix: no valid project detected` | 工作目录是系统目录 | 打开包含代码的项目文件夹，或在 MCP 配置中添加 `"env": { "MEMORIX_PROJECT_ROOT": "/项目路径" }` |
+| `memorix: command not found` | npm 全局安装目录不在 PATH 中 | 执行 `npm config get prefix` 查看安装位置，将其 `bin/` 加入系统 PATH，然后重启 IDE |
+| 终端里能用但 IDE 里不行 | IDE 使用的 PATH 和终端不同 | **Windows：** 安装后重启 IDE。**macOS/Linux：** 确保 `~/.bashrc` 或 `~/.zshrc` 导出了 npm 全局 bin 路径 |
+| 参数类型错误 | 版本过旧或非 Anthropic 模型的兼容问题 | 更新：`npm install -g memorix@latest` |
+
+**正确的 `.claude.json` 配置：**
+```json
+{
+  "mcpServers": {
+    "memorix": {
+      "command": "memorix",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+**❌ 错误写法** — 不要用这些：
+```
+"command": "npx"                    ← 会超时
+"command": "npx -y memorix serve"   ← 格式错误
+"command": "node memorix serve"     ← 不是这样用的
+```
 
 ---
 
