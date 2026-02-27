@@ -20,7 +20,7 @@ describe('Project Detector', () => {
     const project = detectProject(process.cwd());
     // Normalize path separators for cross-platform compatibility
     expect(project.rootPath.replace(/\\/g, '/')).toBe(process.cwd().replace(/\\/g, '/'));
-  });
+  }, 30_000); // Git commands can be slow on Windows (antivirus, dubious ownership)
 
   it('should fallback to directory name for non-git dirs', () => {
     const project = detectProject('/tmp');
