@@ -117,6 +117,7 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
   server: McpServer;
   graphManager: KnowledgeGraphManager;
   projectId: string;
+  deferredInit: () => Promise<void>;
 }> {
   // Detect current project
   const project = detectProject(cwd);
@@ -159,103 +160,9 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
   console.error(`[memorix] Project: ${project.id} (${project.name})`);
   console.error(`[memorix] Data dir: ${projectDir}`);
 
-  // Auto-install hooks for newly detected agents (incremental, silent, non-blocking)
-  try {
-    const { getHookStatus, installHooks, detectInstalledAgents } = await import('./hooks/installers/index.js');
-    const workDir = cwd ?? process.cwd();
-    const statuses = await getHookStatus(workDir);
-    const installedAgents = new Set(statuses.filter((s) => s.installed).map((s) => s.agent));
-    const detectedAgents = await detectInstalledAgents();
-
-    // Install hooks for each detected agent that isn't already installed
-    for (const agent of detectedAgents) {
-      if (installedAgents.has(agent)) continue; // already installed
-      try {
-        const config = await installHooks(agent, workDir);
-        console.error(`[memorix] Auto-installed hooks for ${agent} → ${config.configPath}`);
-      } catch { /* skip */ }
-    }
-  } catch { /* hooks install is optional */ }
-
-  // Sync advisory: compute once per session, show on first memorix_search
+  // Sync advisory variables — populated by deferredInit(), used by memorix_search
   let syncAdvisoryShown = false;
   let syncAdvisory: string | null = null;
-  try {
-    const engine = new WorkspaceSyncEngine(project.rootPath);
-    const scan = await engine.scan();
-    const lines: string[] = [];
-
-    // Count what's available from other agents
-    const totalMCP = Object.values(scan.mcpConfigs).reduce((sum, arr) => sum + arr.length, 0);
-    const totalSkills = scan.skills.length;
-    const totalRules = scan.rulesCount;
-    const totalWorkflows = scan.workflows.length;
-
-    if (totalMCP > 0 || totalSkills > 0 || totalRules > 0 || totalWorkflows > 0) {
-      lines.push('', '---', '🔄 **Cross-Agent Sync Available**');
-
-      // Detail MCP servers per agent
-      for (const [agent, servers] of Object.entries(scan.mcpConfigs)) {
-        const list = servers as MCPServerEntry[];
-        if (list.length > 0) {
-          lines.push(`- **${agent}** MCP: ${list.map(s => s.name).join(', ')}`);
-        }
-      }
-
-      // Detail skills per agent
-      if (totalSkills > 0) {
-        const byAgent = new Map<string, string[]>();
-        for (const sk of scan.skills) {
-          const arr = byAgent.get(sk.sourceAgent) || [];
-          arr.push(sk.name);
-          byAgent.set(sk.sourceAgent, arr);
-        }
-        for (const [agent, names] of byAgent) {
-          lines.push(`- **${agent}** skills: ${names.join(', ')}`);
-        }
-      }
-      if (scan.skillConflicts.length > 0) lines.push(`  ⚠️ ${scan.skillConflicts.length} name conflict(s)`);
-      if (totalRules > 0) lines.push(`- **${totalRules} rule(s)** found`);
-      if (totalWorkflows > 0) lines.push(`- **${totalWorkflows} workflow(s)** found`);
-
-      lines.push('');
-      lines.push('⚠️ IMPORTANT INSTRUCTIONS FOR AI AGENT:');
-      lines.push('1. Tell the user what configs/skills are available from other agents (list them).');
-      lines.push('2. Ask which ones they want to sync.');
-      lines.push('3. DO NOT manually copy files or run shell commands to sync.');
-      lines.push('4. ONLY use `memorix_workspace_sync action="apply" target="<agent>"` to sync all,');
-      lines.push('   or add `items=["name1","name2"]` to sync specific items selectively.');
-      syncAdvisory = lines.join('\n');
-    }
-    console.error(`[memorix] Sync advisory: ${syncAdvisory ? 'available' : 'nothing to sync'}`);
-  } catch {
-    // Sync scan is optional, don't block startup
-  }
-
-  // Watch for external writes (e.g., from hook processes) and hot-reload
-  const observationsFile = projectDir + '/observations.json';
-  let reloadDebounce: ReturnType<typeof setTimeout> | null = null;
-  try {
-    watch(observationsFile, () => {
-      // Debounce: wait 500ms after last change before reloading
-      if (reloadDebounce) clearTimeout(reloadDebounce);
-      reloadDebounce = setTimeout(async () => {
-        try {
-          await resetDb(); // Clear Orama before re-inserting
-          await initObservations(projectDir);
-          const count = await reindexObservations();
-          if (count > 0) {
-            console.error(`[memorix] Hot-reloaded ${count} observations (external write detected)`);
-          }
-        } catch {
-          // Silent — don't crash the server
-        }
-      }, 500);
-    });
-    console.error(`[memorix] Watching for external writes (hooks hot-reload enabled)`);
-  } catch {
-    console.error(`[memorix] Warning: could not watch observations file for hot-reload`);
-  }
 
   // Create MCP server (or use existing one from roots-aware flow)
   const server = existingServer ?? new McpServer({
@@ -1609,5 +1516,94 @@ export async function createMemorixServer(cwd?: string, existingServer?: McpServ
     },
   );
 
-  return { server, graphManager, projectId: project.id };
+  // Deferred initialization — runs AFTER transport connect so MCP handshake isn't blocked.
+  // Hooks auto-install, sync advisory scan, and file watcher are non-essential for tool
+  // functionality and can take 30-60s on machines with many IDEs/projects.
+  const deferredInit = async () => {
+    // Auto-install hooks for newly detected agents
+    try {
+      const { getHookStatus, installHooks, detectInstalledAgents } = await import('./hooks/installers/index.js');
+      const workDir = cwd ?? process.cwd();
+      const statuses = await getHookStatus(workDir);
+      const installedAgents = new Set(statuses.filter((s) => s.installed).map((s) => s.agent));
+      const detectedAgents = await detectInstalledAgents();
+
+      for (const agent of detectedAgents) {
+        if (installedAgents.has(agent)) continue;
+        try {
+          const config = await installHooks(agent, workDir);
+          console.error(`[memorix] Auto-installed hooks for ${agent} → ${config.configPath}`);
+        } catch { /* skip */ }
+      }
+    } catch { /* hooks install is optional */ }
+
+    // Sync advisory: compute once, show on first memorix_search
+    try {
+      const engine = new WorkspaceSyncEngine(project.rootPath);
+      const scan = await engine.scan();
+      const lines: string[] = [];
+
+      const totalMCP = Object.values(scan.mcpConfigs).reduce((sum, arr) => sum + arr.length, 0);
+      const totalSkills = scan.skills.length;
+      const totalRules = scan.rulesCount;
+      const totalWorkflows = scan.workflows.length;
+
+      if (totalMCP > 0 || totalSkills > 0 || totalRules > 0 || totalWorkflows > 0) {
+        lines.push('', '---', '🔄 **Cross-Agent Sync Available**');
+        for (const [agent, servers] of Object.entries(scan.mcpConfigs)) {
+          const list = servers as MCPServerEntry[];
+          if (list.length > 0) {
+            lines.push(`- **${agent}** MCP: ${list.map(s => s.name).join(', ')}`);
+          }
+        }
+        if (totalSkills > 0) {
+          const byAgent = new Map<string, string[]>();
+          for (const sk of scan.skills) {
+            const arr = byAgent.get(sk.sourceAgent) || [];
+            arr.push(sk.name);
+            byAgent.set(sk.sourceAgent, arr);
+          }
+          for (const [agent, names] of byAgent) {
+            lines.push(`- **${agent}** skills: ${names.join(', ')}`);
+          }
+        }
+        if (scan.skillConflicts.length > 0) lines.push(`  ⚠️ ${scan.skillConflicts.length} name conflict(s)`);
+        if (totalRules > 0) lines.push(`- **${totalRules} rule(s)** found`);
+        if (totalWorkflows > 0) lines.push(`- **${totalWorkflows} workflow(s)** found`);
+        lines.push('');
+        lines.push('⚠️ IMPORTANT INSTRUCTIONS FOR AI AGENT:');
+        lines.push('1. Tell the user what configs/skills are available from other agents (list them).');
+        lines.push('2. Ask which ones they want to sync.');
+        lines.push('3. DO NOT manually copy files or run shell commands to sync.');
+        lines.push('4. ONLY use `memorix_workspace_sync action="apply" target="<agent>"` to sync all,');
+        lines.push('   or add `items=["name1","name2"]` to sync specific items selectively.');
+        syncAdvisory = lines.join('\n');
+      }
+      console.error(`[memorix] Sync advisory: ${syncAdvisory ? 'available' : 'nothing to sync'}`);
+    } catch { /* sync scan is optional */ }
+
+    // Watch for external writes (e.g., from hook processes) and hot-reload
+    const observationsFile = projectDir + '/observations.json';
+    let reloadDebounce: ReturnType<typeof setTimeout> | null = null;
+    try {
+      watch(observationsFile, () => {
+        if (reloadDebounce) clearTimeout(reloadDebounce);
+        reloadDebounce = setTimeout(async () => {
+          try {
+            await resetDb();
+            await initObservations(projectDir);
+            const count = await reindexObservations();
+            if (count > 0) {
+              console.error(`[memorix] Hot-reloaded ${count} observations (external write detected)`);
+            }
+          } catch { /* silent */ }
+        }, 500);
+      });
+      console.error(`[memorix] Watching for external writes (hooks hot-reload enabled)`);
+    } catch {
+      console.error(`[memorix] Warning: could not watch observations file for hot-reload`);
+    }
+  };
+
+  return { server, graphManager, projectId: project.id, deferredInit };
 }

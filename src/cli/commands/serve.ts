@@ -78,17 +78,21 @@ export default defineCommand({
       }
 
       // Initialize tools on the already-connected server
-      const { projectId } = await createMemorixServer(projectRoot, mcpServer);
+      const { projectId, deferredInit } = await createMemorixServer(projectRoot, mcpServer);
       console.error(`[memorix] MCP Server running on stdio (project: ${projectId})`);
       console.error(`[memorix] Project root: ${projectRoot}`);
+      // Background: hooks, sync scan, file watcher (non-blocking)
+      deferredInit().catch(e => console.error(`[memorix] Deferred init error:`, e));
     } else {
       // Normal flow: cwd is a valid project
-      const { server, projectId } = await createMemorixServer(projectRoot);
+      const { server, projectId, deferredInit } = await createMemorixServer(projectRoot);
       const transport = new StdioServerTransport();
       await server.connect(transport);
 
       console.error(`[memorix] MCP Server running on stdio (project: ${projectId})`);
       console.error(`[memorix] Project root: ${projectRoot}`);
+      // Background: hooks, sync scan, file watcher (non-blocking)
+      deferredInit().catch(e => console.error(`[memorix] Deferred init error:`, e));
     }
   },
 });

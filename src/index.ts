@@ -16,12 +16,13 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createMemorixServer } from './server.js';
 
 async function main(): Promise<void> {
-  const { server, projectId } = await createMemorixServer();
+  const { server, projectId, deferredInit } = await createMemorixServer();
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
   console.error(`[memorix] MCP Server running on stdio (project: ${projectId})`);
+  deferredInit().catch(e => console.error(`[memorix] Deferred init error:`, e));
 }
 
 main().catch((error) => {
