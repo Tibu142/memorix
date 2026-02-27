@@ -35,16 +35,7 @@ export default defineCommand({
 
     console.error(`[memorix] Starting with cwd: ${projectRoot}`);
 
-    // ALWAYS connect transport first — MCP handshake must complete within the client's
-    // startup timeout (Codex default: 10s). All heavy work (git, data loading, reindex)
-    // happens AFTER the connection is established.
-    const mcpServer = new McpServer({ name: 'memorix', version: '0.1.0' });
-    const transport = new StdioServerTransport();
-    await mcpServer.connect(transport);
-    console.error(`[memorix] Transport connected, initializing...`);
-
     // Lightweight check: does this look like a valid project directory?
-    // Avoids calling detectProject (which runs slow git commands) for the fast path.
     const looksValid = existsSync(join(projectRoot, '.git'))
       || existsSync(join(projectRoot, 'package.json'))
       || existsSync(join(projectRoot, 'Cargo.toml'))
@@ -52,8 +43,12 @@ export default defineCommand({
       || existsSync(join(projectRoot, 'pyproject.toml'));
 
     if (!looksValid) {
-      // cwd might not be a project — try MCP roots protocol to get IDE workspace path
+      // cwd might not be a project — need MCP roots protocol to get IDE workspace path.
+      // Must connect transport first to send listRoots request.
       console.error(`[memorix] cwd may not be a valid project, trying MCP roots protocol...`);
+      const mcpServer = new McpServer({ name: 'memorix', version: '0.1.0' });
+      const transport = new StdioServerTransport();
+      await mcpServer.connect(transport);
 
       let rootResolved = false;
       try {
@@ -65,7 +60,6 @@ export default defineCommand({
           const rootUri = rootsResult.roots[0].uri;
           if (rootUri.startsWith('file://')) {
             const urlPath = decodeURIComponent(new URL(rootUri).pathname);
-            // On Windows, URL.pathname has a leading / (e.g., /C:/path) — remove it
             const normalizedPath = process.platform === 'win32' && urlPath.match(/^\/[A-Za-z]:/)
               ? urlPath.slice(1) : urlPath;
             console.error(`[memorix] MCP client root: ${normalizedPath}`);
@@ -77,7 +71,6 @@ export default defineCommand({
         console.error(`[memorix] MCP roots not available (client may not support it)`);
       }
 
-      // Full validation with detectProject (may call git — but transport already connected)
       if (!rootResolved) {
         const earlyDetect = detectProject(projectRoot);
         if (earlyDetect.id === '__invalid__') {
@@ -86,13 +79,24 @@ export default defineCommand({
           process.exit(1);
         }
       }
-    }
 
-    // Initialize: register tools on the already-connected server
-    const { projectId, deferredInit } = await createMemorixServer(projectRoot, mcpServer);
-    console.error(`[memorix] MCP Server running on stdio (project: ${projectId})`);
-    console.error(`[memorix] Project root: ${projectRoot}`);
-    // Background: hooks, sync scan, file watcher (non-blocking)
-    deferredInit().catch(e => console.error(`[memorix] Deferred init error:`, e));
+      // Register tools on the already-connected server
+      const { projectId, deferredInit } = await createMemorixServer(projectRoot, mcpServer);
+      console.error(`[memorix] MCP Server running on stdio (project: ${projectId})`);
+      console.error(`[memorix] Project root: ${projectRoot}`);
+      deferredInit().catch(e => console.error(`[memorix] Deferred init error:`, e));
+    } else {
+      // Normal path: register tools FIRST, then connect transport.
+      // This ensures tools/list returns all tools immediately on connect.
+      // With fs-first detectProject (~1ms) + deferred hooks/sync, this completes
+      // well within Codex's startup_timeout_sec (default 10s, recommended 30s).
+      const { server, projectId, deferredInit } = await createMemorixServer(projectRoot);
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+
+      console.error(`[memorix] MCP Server running on stdio (project: ${projectId})`);
+      console.error(`[memorix] Project root: ${projectRoot}`);
+      deferredInit().catch(e => console.error(`[memorix] Deferred init error:`, e));
+    }
   },
 });
