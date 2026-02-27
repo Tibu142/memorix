@@ -13,6 +13,12 @@ local_cache/
 # Dev-only files
 demo/
 image/
+.tmp-*
+*.tmp
+
+# Auto-generated agent configs
+.agents/
+.windsurfrules
 
 # Logs & OS
 *.log
