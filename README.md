@@ -21,7 +21,7 @@
     <img src="https://img.shields.io/badge/Works%20with-Gemini%20CLI-4285F4?style=flat-square" alt="Gemini CLI">
   </p>
   <p align="center">
-    <a href="#-stop-re-explaining-your-project">Why</a> •
+    <a href="#%EF%B8%8F-stop-re-explaining-your-project">Why</a> •
     <a href="#-get-started-in-30-seconds">Quick Start</a> •
     <a href="#-real-world-scenarios">Scenarios</a> •
     <a href="#-what-memorix-can-do">Features</a> •
@@ -32,7 +32,7 @@
 
 ---
 
-## 😤 Stop Re-Explaining Your Project
+## ⚠️ Stop Re-Explaining Your Project
 
 Your AI assistant forgets everything when you start a new chat. You spend 10 minutes re-explaining your architecture. **Again.** And if you switch from Cursor to Claude Code? Everything is gone. **Again.**
 
@@ -269,7 +269,7 @@ Now you want to try Kiro.
 
 ## 🧠 What Memorix Can Do
 
-### 24 MCP Tools
+### 25 MCP Tools
 
 | Category | Tools | What They Do |
 |----------|-------|-------------|
@@ -279,7 +279,7 @@ Now you want to try Kiro.
 | **Maintenance** | `memorix_retention`, `memorix_consolidate`, `memorix_export/import` | Decay scoring, merge duplicates, backup & share |
 | **Dashboard** | `memorix_dashboard` | Interactive web UI — D3.js knowledge graph, observation browser, retention panel |
 | **Workspace Sync** | `memorix_workspace_sync`, `memorix_rules_sync`, `memorix_skills` | Migrate MCP configs across 8 agents, sync rules (`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`), auto-generate project skills |
-| **Knowledge Graph** | `create_entities`, `create_relations`, `add_observations`, `search_nodes`, `read_graph` | [MCP Official Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) compatible — same API, more features |
+| **Knowledge Graph** | `create_entities`, `create_relations`, `add_observations`, `delete_entities`, `delete_observations`, `delete_relations`, `search_nodes`, `open_nodes`, `read_graph` | [MCP Official Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) compatible — same API, more features |
 
 ### 9 Observation Types
 
@@ -299,7 +299,7 @@ Automatically captures decisions, errors, and gotchas from your coding sessions.
 
 | | [Mem0](https://github.com/mem0ai/mem0) | [mcp-memory-service](https://github.com/doobidoo/mcp-memory-service) | [claude-mem](https://github.com/anthropics/claude-code) | **Memorix** |
 |---|---|---|---|---|
-| **Agents supported** | SDK-based | 13+ (MCP) | Claude Code only | **7 IDEs (MCP)** |
+| **Agents supported** | SDK-based | 13+ (MCP) | Claude Code only | **8 agents (MCP)** |
 | **Cross-agent sync** | No | No | No | **Yes (configs, rules, skills, workflows)** |
 | **Rules sync** | No | No | No | **Yes (7 formats)** |
 | **Skills engine** | No | No | No | **Yes (auto-generated from memory)** |
@@ -360,7 +360,7 @@ Run `memorix_workspace_sync` with action `"migrate"` and your target IDE. It sca
 Memorix workspace sync migrates MCP configs, agent rules (`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`), skills, and workflows. One command, seconds to complete.
 
 **Is there an MCP server for persistent AI coding memory?**
-Yes — Memorix is a cross-agent memory MCP server supporting 7 IDEs with knowledge graph, 3-layer progressive disclosure search, workspace sync, and auto-generated project skills.
+Yes — Memorix is a cross-agent memory MCP server supporting 8 agents with knowledge graph, 3-layer progressive disclosure search, workspace sync, and auto-generated project skills.
 
 **How is this different from mcp-memory-service?**
 Both are great memory servers. Memorix adds: cross-agent workspace sync (MCP configs, rules, skills), auto-generated project skills from memory patterns, 3-layer token-efficient search, and session-start memory injection hooks.

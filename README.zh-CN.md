@@ -21,7 +21,7 @@
     <img src="https://img.shields.io/badge/Works%20with-Gemini%20CLI-4285F4?style=flat-square" alt="Gemini CLI">
   </p>
   <p align="center">
-    <a href="#-别再反复解释你的项目了">痛点</a> •
+    <a href="#%EF%B8%8F-别再反复解释你的项目了">痛点</a> •
     <a href="#-30-秒快速开始">快速开始</a> •
     <a href="#-真实使用场景">场景</a> •
     <a href="#-memorix-能做什么">功能</a> •
@@ -32,7 +32,7 @@
 
 ---
 
-## 😤 别再反复解释你的项目了
+## ⚠️ 别再反复解释你的项目了
 
 你的 AI 助手每次新对话都会忘记一切。你要花 10 分钟重新解释架构。**又一次。** 如果从 Cursor 切到 Claude Code？所有上下文全部丢失。**又一次。**
 
@@ -269,7 +269,7 @@ memorix serve --cwd .   # 应该显示 "[memorix] MCP Server running on stdio"
 
 ## 🧠 Memorix 能做什么
 
-### 24 个 MCP 工具
+### 25 个 MCP 工具
 
 | 类别 | 工具 | 功能 |
 |------|------|------|
@@ -279,7 +279,7 @@ memorix serve --cwd .   # 应该显示 "[memorix] MCP Server running on stdio"
 | **维护** | `memorix_retention`, `memorix_consolidate`, `memorix_export/import` | 衰减评分，合并重复，备份与共享 |
 | **可视化** | `memorix_dashboard` | 交互式 Web UI — D3.js 知识图谱、观察浏览器、衰减面板 |
 | **工作区同步** | `memorix_workspace_sync`, `memorix_rules_sync`, `memorix_skills` | 跨 8 个 Agent 迁移 MCP 配置，同步规则（`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`），自动生成项目技能 |
-| **知识图谱** | `create_entities`, `create_relations`, `add_observations`, `search_nodes`, `read_graph` | 兼容 [MCP 官方 Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) — 相同 API，更多功能 |
+| **知识图谱** | `create_entities`, `create_relations`, `add_observations`, `delete_entities`, `delete_observations`, `delete_relations`, `search_nodes`, `open_nodes`, `read_graph` | 兼容 [MCP 官方 Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) — 相同 API，更多功能 |
 
 ### 9 种观察类型
 
@@ -299,7 +299,7 @@ memorix hooks install    # 一条命令安装
 
 | | [Mem0](https://github.com/mem0ai/mem0) | [mcp-memory-service](https://github.com/doobidoo/mcp-memory-service) | [claude-mem](https://github.com/anthropics/claude-code) | **Memorix** |
 |---|---|---|---|---|
-| **支持的 Agent** | SDK 集成 | 13+（MCP） | 仅 Claude Code | **7 个 IDE（MCP）** |
+| **支持的 Agent** | SDK 集成 | 13+（MCP） | 仅 Claude Code | **8 个 Agent（MCP）** |
 | **跨 Agent 同步** | 否 | 否 | 否 | **是（配置、规则、技能、工作流）** |
 | **规则同步** | 否 | 否 | 否 | **是（7 种格式）** |
 | **技能引擎** | 否 | 否 | 否 | **是（从记忆自动生成）** |
@@ -360,7 +360,7 @@ npm install -g @huggingface/transformers
 Memorix 工作区同步可以迁移 MCP 配置、Agent 规则（`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`）、技能和工作流。一条命令，几秒完成。
 
 **有没有用于持久 AI 编码记忆的 MCP 服务器？**
-有 — Memorix 是一个跨 Agent 记忆 MCP 服务器，支持 7 个 IDE，提供知识图谱、3 层渐进式搜索、工作区同步和自动生成项目技能。
+有 — Memorix 是一个跨 Agent 记忆 MCP 服务器，支持 8 个 Agent，提供知识图谱、3 层渐进式搜索、工作区同步和自动生成项目技能。
 
 **和 mcp-memory-service 有什么区别？**
 两个都是优秀的记忆服务器。Memorix 额外提供：跨 Agent 工作区同步（MCP 配置、规则、技能）、从记忆模式自动生成项目技能、3 层 token 高效搜索、会话启动记忆注入 Hook。
