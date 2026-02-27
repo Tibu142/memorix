@@ -30,6 +30,8 @@ Thumbs.db
 .memorix/
 .windsurf/hooks.json
 .windsurf/rules/memorix.md
+.github/copilot-instructions.md
+AGENTS.md
 
 # Test scripts
 test-*.mjs
