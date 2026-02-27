@@ -108,21 +108,24 @@ function findPackageRoot(cwd: string): string | null {
  * Returns null if not inside a git repository.
  */
 function getGitRoot(cwd: string): string | null {
+  // Fast path: walk up to find .git directory (instant, no subprocess)
+  let dir = path.resolve(cwd);
+  const fsRoot = path.parse(dir).root;
+  while (dir !== fsRoot) {
+    if (existsSync(path.join(dir, '.git'))) return dir;
+    dir = path.dirname(dir);
+  }
+
+  // Slow path: git CLI for edge cases (submodules, worktrees, bare repos)
   try {
     const root = execSync('git -c safe.directory=* rev-parse --show-toplevel', {
       cwd,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
     }).trim();
     return root || null;
   } catch {
-    // Fallback: walk up to find .git directory
-    let dir = path.resolve(cwd);
-    const fsRoot = path.parse(dir).root;
-    while (dir !== fsRoot) {
-      if (existsSync(path.join(dir, '.git'))) return dir;
-      dir = path.dirname(dir);
-    }
     return null;
   }
 }
@@ -132,16 +135,21 @@ function getGitRoot(cwd: string): string | null {
  * Returns null if not a git repository or no remote configured.
  */
 function getGitRemote(cwd: string): string | null {
+  // Fast path: read .git/config directly (instant, no subprocess)
+  const fsRemote = readGitConfigRemote(cwd);
+  if (fsRemote) return fsRemote;
+
+  // Slow path: git CLI for edge cases (submodules, worktrees, non-standard layouts)
   try {
     const remote = execSync('git -c safe.directory=* remote get-url origin', {
       cwd,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
     }).trim();
     return remote || null;
   } catch {
-    // Fallback: read .git/config directly (handles dubious ownership on Windows)
-    return readGitConfigRemote(cwd);
+    return null;
   }
 }
 
