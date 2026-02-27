@@ -166,52 +166,57 @@ function generateCursorConfig(): Record<string, unknown> {
 
 /**
  * Generate Kiro hook files.
- * Format: .kiro/hooks/*.kiro.hook — structured YAML-like config
+ * Format: .kiro/hooks/*.kiro.hook — JSON config
  * See: https://kiro.dev/docs/hooks/
+ * Schema confirmed from: github.com/awsdataarchitect/kiro-best-practices
  */
 function generateKiroHookFiles(): Array<{ filename: string; content: string }> {
   const cmd = `${resolveHookCommand()} hook`;
   return [
     {
       filename: 'memorix-agent-stop.kiro.hook',
-      content: `---
-title: Memorix Session Memory
-description: Record session context when agent completes a turn
-event: agent_stop
----
-
-Call memorix MCP tools to store important context from this conversation:
-1. Use memorix_store to record any decisions, bug fixes, gotchas, or configuration changes
-2. Include relevant file paths and concepts for searchability
-`,
+      content: JSON.stringify({
+        enabled: true,
+        name: 'Memorix Session Memory',
+        description: 'Record session context when agent completes a turn',
+        version: '1',
+        when: { type: 'agentStop' },
+        then: {
+          type: 'askAgent',
+          prompt: 'Call memorix MCP tools to store important context from this conversation:\n1. Use memorix_store to record any decisions, bug fixes, gotchas, or configuration changes\n2. Include relevant file paths and concepts for searchability',
+        },
+      }, null, 2),
     },
     {
       filename: 'memorix-prompt-submit.kiro.hook',
-      content: `---
-title: Memorix Context Loader
-description: Load relevant memories when user submits a prompt
-event: prompt_submit
----
-
-Before responding, search for relevant context:
-1. Call memorix_search with a query related to the user's prompt
-2. If results are found, use memorix_detail to fetch the most relevant ones
-3. Reference relevant memories naturally in your response
-`,
+      content: JSON.stringify({
+        enabled: true,
+        name: 'Memorix Context Loader',
+        description: 'Load relevant memories when user submits a prompt',
+        version: '1',
+        when: { type: 'promptSubmit' },
+        then: {
+          type: 'askAgent',
+          prompt: 'Before responding, search for relevant context:\n1. Call memorix_search with a query related to the user\'s prompt\n2. If results are found, use memorix_detail to fetch the most relevant ones\n3. Reference relevant memories naturally in your response',
+        },
+      }, null, 2),
     },
     {
       filename: 'memorix-file-save.kiro.hook',
-      content: `---
-title: Memorix File Change Tracker
-description: Track significant file changes for cross-session memory
-event: file_save
-filePattern: "**/*.{ts,js,tsx,jsx,py,rs,go,java,md}"
----
-
-\`\`\`bash
-${cmd}
-\`\`\`
-`,
+      content: JSON.stringify({
+        enabled: true,
+        name: 'Memorix File Change Tracker',
+        description: 'Track significant file changes for cross-session memory',
+        version: '1',
+        when: {
+          type: 'fileEdited',
+          patterns: ['**/*.ts', '**/*.js', '**/*.tsx', '**/*.jsx', '**/*.py', '**/*.rs', '**/*.go', '**/*.java', '**/*.md'],
+        },
+        then: {
+          type: 'runCommand',
+          command: cmd,
+        },
+      }, null, 2),
     },
   ];
 }
